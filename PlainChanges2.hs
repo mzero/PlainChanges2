@@ -1,8 +1,11 @@
 module PlainChanges2 where
 
+import Data.List (isPrefixOf)
+
 import Codec.Midi
 import Euterpea
 import Euterpea.IO.MIDI
+import Euterpea.IO.MIDI.MidiIO (getAllDevices)
 
 import Changes
 
@@ -53,7 +56,7 @@ ringNotes :: Dur -> [a] -> Music a
 ringNotes d = line . map (uncurry note) . ring d
 
 ringPerc :: Dur -> [PercussionSound] -> Music Pitch
-ringPerc d = instrument Percussion . line . map (uncurry $ flip perc) . ring d
+ringPerc d = line . map (uncurry $ flip perc) . ring d
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- Orchestration
@@ -64,7 +67,25 @@ onBass  = instrument ElectricBassPicked
 onBells = instrument TubularBells
 onCoil  = instrument Lead2Sawtooth
 onDrums = instrument Percussion
-onVoice = instrument Lead6Voice
+onVoice = instrument ChoirAahs
+
+mainStagePatchMap :: UserPatchMap   -- N.B.: 0-based midi channels!
+mainStagePatchMap = [ (ElectricBassPicked, 0)
+                    , (Lead2Sawtooth, 1)
+                    , (TubularBells, 2)
+                    , (ChoirAahs, 3)
+                    , (Percussion, 9)
+                    ]
+
+playMainStage :: Music Pitch -> IO ()
+playMainStage m = do
+    devs <- getAllDevices
+    case findIacOutput devs of
+        ((iacOut,_):_) -> playMidi iacOut $ toMidi (defToPerf m) mainStagePatchMap
+        [] -> putStrLn "*** No IAC Driver output found"
+  where
+    findIacOutput = filter (namedIAC . snd) .  filter (output . snd)
+    namedIAC = ("IAC Driver" `isPrefixOf`) . name
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- Preamble & Part I
@@ -128,5 +149,63 @@ p2tempo m = tempo (startTempo / 120) mAll
     mRest = removeZeros $ dropM firstDur m
     mAll = mFirst :+: phrase [Tmp $ Accelerando accl] mRest
 
+interruptionB :: Music Pitch
+interruptionB = tempo (170 / 120) $ v :=: b :=: c :=: d
+  where
+    t = en
+    notes oct = ringNotes t [(C, oct), (G, oct-1)]
+    v = onVoice $ notes 5
+    b = onBass $ notes 4
+    c = onCoil $ notes 5
+    d = onDrums $ ringPerc t [AcousticSnare, LowTom]
+
 partII :: Music Pitch
-partII = p2tempo $ p2Ostinado :=: p2coil
+partII = (p2tempo $ p2Ostinado :=: p2coil) :+: interruptionB
+
+-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+-- Part III
+-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+bFlatMajorScale :: [PitchClass]
+bFlatMajorScale = [Bf, C, D, Ef, F, G, A, Bf]
+
+
+p3Ostinado :: Music Pitch
+p3Ostinado = onBass $ ringNotes en [(Bf, 3), (F, 3), (D, 3), (C, 3), (Bf, 2)]
+
+p3r2, p3r3, p3r4 :: Music Pitch
+p3r2 = ringNotes qn [(Bf, 5), (F, 5)]
+p3r3 = ringNotes qn [(D, 5), (C, 5), (Bf, 4)]
+p3r4 = ringNotes en [(Bf, 4), (F, 4), (D, 4), (C, 4)]
+
+p3r2dur, p3r3dur, p3r4dur :: Dur
+p3r2dur = dur p3r2
+p3r3dur = dur p3r3
+p3r4dur = dur p3r4
+
+p3OstinadoPhraseDur :: Dur
+p3OstinadoPhraseDur = 11 * qn
+
+p3OnCoil :: Music Pitch -> Music Pitch
+p3OnCoil = onCoil . transpose 12
+
+p3SetA = p3OnCoil $ chord
+    [ timesM 10 $ p3r2
+    , delayM (2 * p3r2dur) $ timesM 2 p3r3
+    , delayM (2 * p3r2dur + p3r3dur) p3r4
+    ]
+
+p3SetB = onBells (p3r2 :+: rest p3r2dur :+: p3r2 :+: rest p3r2dur :+: p3r2) :+: chord
+    [ onBells $ p3r3 :+: p3r3 :+: p3r4
+    , p3OnCoil p3r4
+    ]
+    :+: p3bellC
+
+p3bellC :: Music Pitch
+p3bellC = onBells $ timesM 8 $ line $ map (note qn) [(Bf, 4), (F, 4), (D, 4), (C, 4), (Bf, 3)]
+
+partIII :: Music Pitch
+partIII = tempo (160/120) $
+    p3Ostinado
+    :=: delayM p3OstinadoPhraseDur p3SetA
+    :=: delayM (12*p3OstinadoPhraseDur) p3SetB
+
