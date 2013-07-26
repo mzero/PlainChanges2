@@ -40,6 +40,23 @@ import Changes
     finale - bell repeat 1-2-3-4 16x, ends with final change of ostinato r5
 -}
 
+{-
+TODO:
+    performance
+        [ ] need note off to preceed note on by small fixed amount
+            - for bass
+            - for coil (as otherwise there is no attack)
+        [ ] generate split, 4 midi ch bass line
+        [ ] generate velocity 1 pre-positioning bass commands
+
+    partIII
+        [ ] middle bells r2 -  shift down scale
+        [ ] final bell tolling - start earlier to avoid 3qn rest after r4
+        [ ] toll the coil's r3 and "fade"?
+
+    general
+        [ ] volumes?
+-}
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- Algorithms
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
@@ -186,7 +203,7 @@ p3OstinadoPhraseDur :: Dur
 p3OstinadoPhraseDur = 11 * qn
 
 p3OnCoil :: Music Pitch -> Music Pitch
-p3OnCoil = onCoil . transpose 12
+p3OnCoil = phrase [Art $ Staccato $ 15/16] . onCoil . transpose 12
 
 p3SetA = p3OnCoil $ chord
     [ timesM 10 $ p3r2
