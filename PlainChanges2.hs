@@ -50,8 +50,6 @@ TODO:
         [ ] generate velocity 1 pre-positioning bass commands
 
     partIII
-        [ ] middle bells r2 -  shift down scale
-        [ ] final bell tolling - start earlier to avoid 3qn rest after r4
         [ ] toll the coil's r3 and "fade"?
 
     general
@@ -104,6 +102,9 @@ playMainStage m = do
     findIacOutput = filter (namedIAC . snd) .  filter (output . snd)
     namedIAC = ("IAC Driver" `isPrefixOf`) . name
 
+writeMidiFile :: FilePath -> Music Pitch -> IO ()
+writeMidiFile fp m = exportFile fp $ toMidi (defToPerf m) mainStagePatchMap
+
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- Preamble & Part I
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
@@ -147,10 +148,6 @@ p2coil = phrase [Art $ Staccato $ 1/4] (onCoil cParts)
     cParts = chord [ cPart (2*9*qn) (sn/2) [(Af, 5), (F,  5), (C, 5)]
                    , cPart (3*9*qn) (sn/2) [(C,  6), (Af, 5), (E, 5)]
                    , cPart (7*9*qn) (sn/2) [(Ef, 6), (C, 6), (G, 5)]
-                   --, cPart (14*9*qn) sn [(F, 5), (Df, 5)]
-                   --, cPart (16*9*qn) sn [(Df, 5), (Af, 4)]
-                   --, cPart (18*9*qn) sn [(F, 5), (Df, 5)]
-                   --, cPart (20*9*qn) sn [(Df, 5), (Af, 4)]
                    ]
     cPart r d ps = rest r :+: ringNotes d ps
     cascade = chord . zipWith (flip cPart en) [0,5*en..]
@@ -177,7 +174,7 @@ interruptionB = tempo (170 / 120) $ v :=: b :=: c :=: d
     d = onDrums $ ringPerc t [AcousticSnare, LowTom]
 
 partII :: Music Pitch
-partII = (p2tempo $ p2Ostinado :=: p2coil) :+: interruptionB
+partII = (p2tempo $ p2Ostinado :=: p2coil) -- :+: interruptionB
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- Part III
@@ -189,8 +186,9 @@ bFlatMajorScale = [Bf, C, D, Ef, F, G, A, Bf]
 p3Ostinado :: Music Pitch
 p3Ostinado = onBass $ ringNotes en [(Bf, 3), (F, 3), (D, 3), (C, 3), (Bf, 2)]
 
-p3r2, p3r3, p3r4 :: Music Pitch
+p3r2, p3r2', p3r3, p3r4 :: Music Pitch
 p3r2 = ringNotes qn [(Bf, 5), (F, 5)]
+p3r2' = ringNotes qn [(F, 5), (D, 5)]
 p3r3 = ringNotes qn [(D, 5), (C, 5), (Bf, 4)]
 p3r4 = ringNotes en [(Bf, 4), (F, 4), (D, 4), (C, 4)]
 
@@ -211,18 +209,18 @@ p3SetA = p3OnCoil $ chord
     , delayM (2 * p3r2dur + p3r3dur) p3r4
     ]
 
-p3SetB = onBells (p3r2 :+: rest p3r2dur :+: p3r2 :+: rest p3r2dur :+: p3r2) :+: chord
+p3SetB = onBells (p3r2 :+: rest p3r2dur :+: p3r2' :+: rest p3r2dur :+: p3r2) :+: chord
     [ onBells $ p3r3 :+: p3r3 :+: p3r4
     , p3OnCoil p3r4
     ]
-    :+: p3bellC
 
-p3bellC :: Music Pitch
-p3bellC = onBells $ timesM 8 $ line $ map (note qn) [(Bf, 4), (F, 4), (D, 4), (C, 4), (Bf, 3)]
+p3SetC :: Music Pitch
+p3SetC = onBells $ timesM 8 $ line $ map (note qn) [(Bf, 4), (F, 4), (D, 4), (C, 4), (Bf, 3)]
 
 partIII :: Music Pitch
 partIII = tempo (160/120) $
     p3Ostinado
-    :=: delayM p3OstinadoPhraseDur p3SetA
+    :=: delayM ( 1*p3OstinadoPhraseDur) p3SetA
     :=: delayM (12*p3OstinadoPhraseDur) p3SetB
+    :=: delayM (26.5*p3OstinadoPhraseDur) p3SetC
 
