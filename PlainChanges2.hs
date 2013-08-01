@@ -125,21 +125,25 @@ bassStrings =
 gMajorScale :: [PitchClass]
 gMajorScale = [G, A, B, C, D, E, Fs]
 
-preamble' :: Music Pitch
-preamble' = onBass bassRingUp :=: onCoil coilRingUp
-  where
-    ringUp d p = line [ note (n*d) p | n <- [1..8]]
-    bassRingUp = line $ map (ringUp en) [(E,2), (A,2), (D,3), (G,3)]
-    coilRingUp = rest qn
-
 
 preamble :: Music Pitch
-preamble = onBass bassRingUp :=: onCoil coilRingUp
+preamble = onBass bassRingUp :=: preOnCoil coilRingUp
   where
     ringUp d p = line [ note (n*d) p | n <- [1..8]]
     bassRingUp = chord $ zipWith bassRingOne [0..] [(E,3), (A,3), (D,4), (G,4)]
     bassRingOne n p = delayM (fromIntegral n*(24*en-sn)) $ ringUp en p :+: timesM ((3-n)*3+3) (note wn p)
-    coilRingUp = rest qn
+    preOnCoil = phrase [Art $ Staccato $ 1/2] . onCoil
+    coilRingUp = chord
+        [ ringTail  50 sn 0 (B,4)
+        , ringTail  72 sn 0 (Fs,5)
+        , ringTail  88 sn 2 (C,4)
+        , ringTail 100 sn 8 (G,5)
+        , ringTail 108 sn 6 (D,6)
+        , ringTail 116 sn 4 (A,5)
+        , ringTail 124 sn 2 (E,6)
+        ]
+    ringTail r d t p =
+        delayM (r*en) $ ringUp d p :+: timesM t (note (8*d) p)
 
 
 p1Ostinado :: Music Pitch
