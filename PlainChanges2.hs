@@ -294,7 +294,14 @@ p3SetB = onBells (p3r2 :+: rest p3r2dur :+: p3r2' :+: rest p3r2dur :+: p3r2) :+:
     ]
 
 p3SetC :: Music Pitch
-p3SetC = onBells $ timesM 8 $ line $ map (note qn) [(Bf, 4), (F, 4), (D, 4), (C, 4), (Bf, 3)]
+p3SetC = chord
+    [ onBells $ timesM 8 final
+    , p3OnCoil $ chord $ zipWith cCycle [5,3,1] [0,12,24]
+    ]
+  where
+    final = line $ map (note qn) [(Bf, 4), (F, 4), (D, 4), (C, 4), (Bf, 3)]
+    cCycle n t =
+        delayM ((8-fromIntegral n)*dur final) $ timesM n $ transpose t final
 
 partIII :: Music Pitch
 partIII = tempo (160/120) $
