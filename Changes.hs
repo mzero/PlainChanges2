@@ -7,6 +7,11 @@ import Data.List (inits, tails)
   See Tintinnalogia, or, the Art of Ringing
       by Richard Duckworth and Fabian Stedman (1671)
       http://www.gutenberg.org/ebooks/18567
+
+  Also Change-ringing Disentangled: With Hints on the Direction of Belfries,
+       on the Management of Bells, Etc. Etc. Etc
+       by Woolmore Wigram (1882)
+       http://openlibrary.org/books/OL24178800M/Change-ringing_disentangled
 -}
 
 {-

@@ -8,15 +8,35 @@ MechBass
         E - 41.2 Hz - 28 - (E,2)
     - Velocity is mapped into 20 steps via: v*20 >> 7
 
-    - range: 2 octaves? octave and minor sixth?
+    - range: octave and semitone!
+        G - (G,3) ~ (Gs, 4)
+        D - (D,3) ~ (Ds, 4)
+        A - (A,2) ~ (As, 3)
+        E - (E,2) ~ (F, 3)
+
+
+
+
+Ideas for part I
+    - play bass in 5ths/4ths on bass
+    - play bass in unison on coil
+    - play bass in 5ths/4ths on bass, staggered
+
+    - double speed r3 on coil
+    -
 
 
 
 
 
-
-
-
+Durations
+    ringOf      #changes    #phrases    dur     final   total
+      1               1          1/2      1        4        5
+      2               2          1        5        5       10
+      3               6          3       21        6       27
+      4              24         12      108        7      115
+      5             120         60      660        8      668
+      6             720        360     4680        9     4689
 
 Bells in Classical music
 http://answers.yahoo.com/question/index?qid=20090516011250AAc2iQn
