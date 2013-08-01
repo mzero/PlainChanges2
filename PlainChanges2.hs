@@ -143,28 +143,21 @@ preamble = onBass bassRingUp :=: onCoil coilRingUp
 
 
 p1Ostinado :: Music Pitch
-p1Ostinado = onBass $ line
-    [ ringNotes qn [(E,4), (C, 4)]
-    , ringNotes qn [(B,3), (G, 3)]
-    , ringNotes qn [(D,4), (B, 3)]
-    , ringNotes qn [(C,4), (A, 3)]
-
-    , ringNotes en [(E,4), (C, 4), (G, 3)]
-    , ringNotes en [(B,3), (G, 3), (D, 3)]
-    , ringNotes en [(D,4), (G, 3), (E, 3)]
-    , ringNotes en [(E,4), (B, 3), (Fs, 3)]
-
-    , ringNotes en [(C,4), (A, 3), (Fs, 3)]
-    , ringNotes en [(G,3), (D, 3), (B, 2)]
-    , ringNotes en [(A,3), (Fs, 3), (E, 3)]
-    , ringNotes en [(D,4), (G, 3), (E, 3)]
-
-    , ringNotes en [(D,4), (A, 3), (Fs, 3), (E, 3)]
-    , ringNotes en [(Fs,4), (D, 4), (G, 3), (E, 3)]
-    , ringNotes en [(A,3), (E, 3), (C, 3), (G, 2)]
+p1Ostinado = onBass $ line $ concat
+    [ riffs qn starts
+    , riffs en mids
+    , riffs en finals
     ]
-
-
+  where
+    riffs d = map (ringNotes d)
+    starts = map init mids
+    mids = map tail finals
+    finals =
+        [ [(G,4), (E,4), (C, 4), (G, 3)]
+        , [(Fs,4), (B,3), (G, 3), (D, 3)]
+        , [(D,4), (A, 3), (Fs, 3), (B, 2)]
+        , [(G,4), (D,4), (B, 3), (E, 3)]
+        ]
 
 
 p1OnCoil :: Music Pitch -> Music Pitch
@@ -177,7 +170,7 @@ p1coilA = p1OnCoil $ chord
     ]
 
 partITempo :: Music Pitch -> Music Pitch
-partITempo = tempoInterp (125/120) (145/120)
+partITempo = tempoInterp (125/120) (140/120)
 
 partI :: Music Pitch
 partI = partITempo $ p1Ostinado
