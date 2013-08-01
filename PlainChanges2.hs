@@ -73,6 +73,11 @@ ringNotes d = line . map (uncurry note) . ring d
 ringPerc :: Dur -> [PercussionSound] -> Music Pitch
 ringPerc d = line . map (uncurry $ flip perc) . ring d
 
+tempoInterp :: Rational -> Rational -> Music a -> Music a
+tempoInterp start end = phrase [Tmp $ Accelerando accl] . tempo start
+  where
+    accl = (end - start) / end
+
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- Orchestration
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
@@ -105,13 +110,77 @@ playMainStage m = do
 writeMidiFile :: FilePath -> Music Pitch -> IO ()
 writeMidiFile fp m = exportFile fp $ toMidi (defToPerf m) mainStagePatchMap
 
+bassStrings :: [(Pitch, Pitch)] -- lowest pitch, highest pitch
+bassStrings =
+    [ ((E,2), (F, 3))
+    , ((A,2), (As, 3))
+    , ((D,3), (Ds, 4))
+    , ((G,3), (Gs, 4))
+    ]
+
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- Preamble & Part I
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
-preamble :: Music Pitch
-preamble = undefined
+gMajorScale :: [PitchClass]
+gMajorScale = [G, A, B, C, D, E, Fs]
 
+preamble' :: Music Pitch
+preamble' = onBass bassRingUp :=: onCoil coilRingUp
+  where
+    ringUp d p = line [ note (n*d) p | n <- [1..8]]
+    bassRingUp = line $ map (ringUp en) [(E,2), (A,2), (D,3), (G,3)]
+    coilRingUp = rest qn
+
+
+preamble :: Music Pitch
+preamble = onBass bassRingUp :=: onCoil coilRingUp
+  where
+    ringUp d p = line [ note (n*d) p | n <- [1..8]]
+    bassRingUp = chord $ zipWith bassRingOne [0..] [(E,3), (A,3), (D,4), (G,4)]
+    bassRingOne n p = delayM (fromIntegral n*(24*en-sn)) $ ringUp en p :+: timesM ((3-n)*3+3) (note wn p)
+    coilRingUp = rest qn
+
+
+p1Ostinado :: Music Pitch
+p1Ostinado = onBass $ line
+    [ ringNotes qn [(E,4), (C, 4)]
+    , ringNotes qn [(B,3), (G, 3)]
+    , ringNotes qn [(D,4), (B, 3)]
+    , ringNotes qn [(C,4), (A, 3)]
+
+    , ringNotes en [(E,4), (C, 4), (G, 3)]
+    , ringNotes en [(B,3), (G, 3), (D, 3)]
+    , ringNotes en [(D,4), (G, 3), (E, 3)]
+    , ringNotes en [(E,4), (B, 3), (Fs, 3)]
+
+    , ringNotes en [(C,4), (A, 3), (Fs, 3)]
+    , ringNotes en [(G,3), (D, 3), (B, 2)]
+    , ringNotes en [(A,3), (Fs, 3), (E, 3)]
+    , ringNotes en [(D,4), (G, 3), (E, 3)]
+
+    , ringNotes en [(D,4), (A, 3), (Fs, 3), (E, 3)]
+    , ringNotes en [(Fs,4), (D, 4), (G, 3), (E, 3)]
+    , ringNotes en [(A,3), (E, 3), (C, 3), (G, 2)]
+    ]
+
+
+
+
+p1OnCoil :: Music Pitch -> Music Pitch
+p1OnCoil = phrase [Art $ Staccato $ 15/16] . onCoil
+
+p1coilA :: Music Pitch
+p1coilA = p1OnCoil $ chord
+    [ delayM (13*qn) $ ringNotes sn [(E,5), (C, 5), (G, 4)]
+    , delayM (1*12*qn) $ ringNotes sn [(D,5), (B, 4), (Fs, 4)]
+    ]
+
+partITempo :: Music Pitch -> Music Pitch
+partITempo = tempoInterp (125/120) (145/120)
+
+partI :: Music Pitch
+partI = partITempo $ p1Ostinado
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- Part II
@@ -161,7 +230,7 @@ p2tempo m = tempo (startTempo / 120) mAll
   where
     startTempo = 70
     endTempo = 85
-    accl = (endTempo - startTempo) / startTempo
+    accl = (endTempo - startTempo) / endTempo
     firstDur = 6 * 9 * qn
     mFirst = removeZeros $ takeM firstDur m
     mRest = removeZeros $ dropM firstDur m

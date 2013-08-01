@@ -100,7 +100,7 @@ comp1split = (instrument ElectricBassPicked $ pealSet comp1bass)
          :=: (instrument Vibraphone $ pealSet comp1main)
 
 splitPatchMap :: UserPatchMap
-splitPatchMap = [(Vibraphone, 0), (ElectricBassPicked, 1)]
+splitPatchMap = [(Vibraphone, 1), (ElectricBassPicked, 0)]
 
 splitMidi :: Performable a => Music a -> Midi
 splitMidi m = toMidi (defToPerf m) splitPatchMap
