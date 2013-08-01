@@ -165,19 +165,28 @@ p1Ostinado = onBass $ line $ concat
 
 
 p1OnCoil :: Music Pitch -> Music Pitch
-p1OnCoil = phrase [Art $ Staccato $ 15/16] . onCoil
+p1OnCoil = phrase [Art $ Staccato $ 7/8] . onCoil
 
 p1coilA :: Music Pitch
-p1coilA = p1OnCoil $ chord
-    [ delayM (13*qn) $ ringNotes sn [(E,5), (C, 5), (G, 4)]
-    , delayM (1*12*qn) $ ringNotes sn [(D,5), (B, 4), (Fs, 4)]
-    ]
+p1coilA = delayM (30*qn) $
+    ringNotes qn [(D,6), (B,5)] :+: ringNotes en [(E,6), (C, 6), (G, 5)]
+
+p1coilB :: Music Pitch
+p1coilB = delayM (40*qn+27*en+14*en) $ chord $
+    zipWith (\n ps -> delayM (n*15*dsn) $ ringNotes dsn ps) [0..]
+        [ [(B,5), (G, 5), (D, 5)]
+        , [(A, 5), (Fs, 5), (B, 4)]
+        , [(D,6), (B, 5), (E, 5)]
+        ]
+
+p1coil :: Music Pitch
+p1coil = p1OnCoil $ p1coilA :=: p1coilB
 
 partITempo :: Music Pitch -> Music Pitch
 partITempo = tempoInterp (125/120) (140/120)
 
 partI :: Music Pitch
-partI = partITempo $ p1Ostinado
+partI = partITempo $ p1Ostinado :=: p1coil
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- Part II
