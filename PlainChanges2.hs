@@ -1,47 +1,15 @@
 module PlainChanges2 where
 
-import Data.List (isPrefixOf)
-
 import Codec.Midi
+import Data.List (isPrefixOf)
 import Euterpea
 import Euterpea.IO.MIDI
 import Euterpea.IO.MIDI.MidiIO (getAllDevices)
 
-import Changes
-import Coil
-import MechBass
 import MidiUtil
-
-{-
-    preamble - base "ring up"
-
-    I.
-    bass r5 ostinato, moderate
-    section 1 - coil r2s
-    (pause)
-    section 2 - coil r3s
-    (pause)
-    interlude A - coil r2 into drum r4
-
-    interruption A - coil & bass r2 (ostinato quiet? paused?)
-
-    II.
-    bass r4 ostinatos, slow, minor
-    section 3 - coil r4 (w/coil r2s, building to end)
-    section 4 - coil r2 descending scale
-    interlude B - voice r2, r3 (2x?), voice mimic ostinato section
-    (pause)
-    section 5 - coil r2s
-
-    interruption B - voice, bass, drums, voice r2
-
-    III.
-    bass r5 ostinato, fast
-    (pause)
-    section 6 - coil growing forest of r2,r3,r4
-    section 7 - coil r4, cross fade to bells (same r4)
-    finale - bell repeat 1-2-3-4 16x, ends with final change of ostinato r5
--}
+import PartI
+import PartII
+import PartIII
 
 {-
 TODO:
@@ -58,39 +26,20 @@ TODO:
     general
         [ ] volumes?
 -}
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
--- Algorithms
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
-ring :: Dur -> [a] -> [(Dur, a)]
-ring d as = zip (cycle durs) (concat $ ringOf as) ++ zip dursLast as
-  where
-    durs = dursFront ++ dursBack
-    dursFront = map (const d) as
-    dursBack = drop 1 dursFront ++ [2*d]
-    dursLast = drop 1 dursFront ++ [4*d]
-
-ringNotes :: Dur -> [a] -> Music a
-ringNotes d = line . map (uncurry note) . ring d
-
-ringPerc :: Dur -> [PercussionSound] -> Music Pitch
-ringPerc d = line . map (uncurry $ flip perc) . ring d
-
-tempoInterp :: Rational -> Rational -> Music a -> Music a
-tempoInterp start end = phrase [Tmp $ Accelerando accl] . tempo start
-  where
-    accl = (end - start) / end
+plainChanges2_30 :: Music Pitch
+plainChanges2_30 =
+    preamble
+    :+: rest (2*wn)
+    :+: partI
+    :+: rest (wn)
+    :+: partII
+    :+: rest (wn)
+    :+: partIII
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
--- Orchestration
+-- Performance
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-
-onBass, onBells, onCoil, onDrums, onVoice :: Music a -> Music a
-onBass  = instrument ElectricBassPicked
-onBells = instrument TubularBells
-onCoil  = instrument Lead2Sawtooth
-onDrums = instrument Percussion
-onVoice = instrument ChoirAahs
 
 mainStagePatchMap :: UserPatchMap   -- N.B.: 0-based midi channels!
 mainStagePatchMap = [ (ElectricBassPicked, 0)
@@ -119,196 +68,4 @@ playMainStage m = do
 writeMidiFile :: FilePath -> Music Pitch -> IO ()
 writeMidiFile fp = exportFile fp . mainStageMidi
 
-
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
--- Preamble & Part I
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-
-gMajorScale :: [PitchClass]
-gMajorScale = [G, A, B, C, D, E, Fs]
-
-
-preamble :: Music Pitch
-preamble = onBass bassRingUp :=: preOnCoil coilRingUp
-  where
-    ringUp d p = line [ note (n*d) p | n <- [1..8]]
-    bassRingUp = chord $ zipWith bassRingOne [0..] [(E,3), (A,3), (D,4), (G,4)]
-    bassRingOne n p = delayM (fromIntegral n*(24*en-sn)) $ ringUp en p :+: timesM ((3-n)*3+3) (note wn p)
-    preOnCoil = phrase [Art $ Staccato $ 1/2] . onCoil
-    coilRingUp = chord
-        [ ringTail  50 sn 0 (B,4)
-        , ringTail  72 sn 0 (Fs,5)
-        , ringTail  88 sn 2 (C,4)
-        , ringTail 100 sn 8 (G,5)
-        , ringTail 108 sn 6 (D,6)
-        , ringTail 116 sn 4 (A,5)
-        , ringTail 124 sn 2 (E,6)
-        ]
-    ringTail r d t p =
-        delayM (r*en) $ ringUp d p :+: timesM t (note (8*d) p)
-
-
-p1Ostinado :: Music Pitch
-p1Ostinado = onBass $ line $ concat
-    [ riffs qn starts
-    , riffs en mids
-    , riffs en finals
-    ]
-  where
-    riffs d = map (ringNotes d)
-    starts = map init mids
-    mids = map tail finals
-    finals =
-        [ [(G,4), (E,4), (C, 4), (G, 3)]
-        , [(Fs,4), (B,3), (G, 3), (D, 3)]
-        , [(D,4), (A, 3), (Fs, 3), (B, 2)]
-        , [(G,4), (D,4), (B, 3), (E, 3)]
-        ]
-
-
-p1OnCoil :: Music Pitch -> Music Pitch
-p1OnCoil = phrase [Art $ Staccato $ 7/8] . onCoil
-
-p1coilA :: Music Pitch
-p1coilA = delayM (30*qn) $
-    ringNotes qn [(D,6), (B,5)] :+: ringNotes en [(E,6), (C, 6), (G, 5)]
-
-p1coilB :: Music Pitch
-p1coilB = delayM (40*qn+27*en+14*en) $ chord $
-    zipWith (\n ps -> delayM (n*15*dsn) $ ringNotes dsn ps) [0..]
-        [ [(B,5), (G, 5), (D, 5)]
-        , [(A, 5), (Fs, 5), (B, 4)]
-        , [(D,6), (B, 5), (E, 5)]
-        ]
-
-p1coil :: Music Pitch
-p1coil = p1OnCoil $ p1coilA :=: p1coilB
-
-partITempo :: Music Pitch -> Music Pitch
-partITempo = tempoInterp (125/120) (140/120)
-
-partI :: Music Pitch
-partI = partITempo $ p1Ostinado :=: p1coil
-
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
--- Part II
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-
-fMinorScale :: [PitchClass]
-fMinorScale = [F, G, Af, Bf, C, Df, Ef, F]
-
-
-b1pitches, b2pitches, b3pitches, b4pitches :: [Pitch]
-b1pitches = [(E,  3), (Df, 3), (Bf, 2), (G, 2)]
-b2pitches = [(C,  4), (Af, 3), (F,  3), (C, 3)]
-b3pitches = [(Df, 4), (C,  4), (Af, 3), (E, 3)]
-b4pitches = [(F,  4), (Ef, 4), (C, 4), (G, 3)]
-
-p2Ostinado :: Music Pitch
-p2Ostinado = onBass
-    $   riff  0   0    0 b1pitches
-    :=: riff  4   0 (-2) b2pitches
-    :=: riff  8   0 (-1) b3pitches
-    :=: riff 10   4 (-3) b4pitches
-  where
-    riff a b c ps = delayM (a*9*qn + b*qn + c*sn) $ ringNotes qn ps
-
-p2OnCoil :: Music Pitch -> Music Pitch
-p2OnCoil = onCoil . phrase [Art $ Staccato $ 1/4]
-
-p2coil :: Music Pitch
-p2coil = p2OnCoil
-    $   riff  2 [(Af, 5), (F,  5), (C, 5)]
-    :=: riff  3 [(C,  6), (Af, 5), (E, 5)]
-    :=: riff  7 [(Ef, 6), (C, 6), (G, 5)]
-  where
-    riff a ps = delayM (a*9*qn) $ ringNotes (sn/2) ps
-
-p2coilAccentB3 :: Music Pitch
-p2coilAccentB3 = p2OnCoil $ delayM (8*9*qn)
-    $ chord (map acc [4, 6, 10, 11, 12])
-  where
-    acc n = delayM (fromIntegral n*9*qn) $ chord $
-        zipWith accLine [0..] $ take 8 $ drop (n * 8) b3line
-    accLine m (p,o) = delayM (m*qn) $ ringNotes (sn) [(p,o+2)]
-    b3line = concat $ ringOf b3pitches ++ [b3pitches]
-
-p2tempo :: Music a -> Music a
-p2tempo m = tempo (startTempo / 120) mAll
-  where
-    startTempo = 70
-    endTempo = 85
-    accl = (endTempo - startTempo) / endTempo
-    firstDur = 6 * 9 * qn
-    mFirst = removeZeros $ takeM firstDur m
-    mRest = removeZeros $ dropM firstDur m
-    mAll = mFirst :+: phrase [Tmp $ Accelerando accl] mRest
-
-interruptionB :: Music Pitch
-interruptionB = tempo (170 / 120) $ v :=: b :=: c :=: d
-  where
-    t = en
-    notes oct = ringNotes t [(C, oct), (G, oct-1)]
-    v = onVoice $ notes 5
-    b = onBass $ notes 4
-    c = onCoil $ notes 5
-    d = onDrums $ ringPerc t [AcousticSnare, LowTom]
-
-partII :: Music Pitch
-partII = (p2tempo $ p2Ostinado :=: p2coil :=: p2coilAccentB3) -- :+: interruptionB
-
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
--- Part III
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-bFlatMajorScale :: [PitchClass]
-bFlatMajorScale = [Bf, C, D, Ef, F, G, A, Bf]
-
-
-p3Ostinado :: Music Pitch
-p3Ostinado = onBass $ ringNotes en [(Bf, 3), (F, 3), (D, 3), (C, 3), (Bf, 2)]
-
-p3r2, p3r2', p3r3, p3r4 :: Music Pitch
-p3r2 = ringNotes qn [(Bf, 5), (F, 5)]
-p3r2' = ringNotes qn [(F, 5), (D, 5)]
-p3r3 = ringNotes qn [(D, 5), (C, 5), (Bf, 4)]
-p3r4 = ringNotes en [(Bf, 4), (F, 4), (D, 4), (C, 4)]
-
-p3r2dur, p3r3dur, p3r4dur :: Dur
-p3r2dur = dur p3r2
-p3r3dur = dur p3r3
-p3r4dur = dur p3r4
-
-p3OstinadoPhraseDur :: Dur
-p3OstinadoPhraseDur = 11 * qn
-
-p3OnCoil :: Music Pitch -> Music Pitch
-p3OnCoil = phrase [Art $ Staccato $ 15/16] . onCoil . transpose 12
-
-p3SetA = p3OnCoil $ chord
-    [ timesM 10 $ p3r2
-    , delayM (2 * p3r2dur) $ timesM 2 p3r3
-    , delayM (2 * p3r2dur + p3r3dur) p3r4
-    ]
-
-p3SetB = onBells (p3r2 :+: rest p3r2dur :+: p3r2' :+: rest p3r2dur :+: p3r2) :+: chord
-    [ onBells $ p3r3 :+: p3r3 :+: p3r4
-    , p3OnCoil p3r4
-    ]
-
-p3SetC :: Music Pitch
-p3SetC = chord
-    [ onBells $ timesM 8 final
-    , p3OnCoil $ chord $ zipWith cCycle [5,3,1] [0,12,24]
-    ]
-  where
-    final = line $ map (note qn) [(Bf, 4), (F, 4), (D, 4), (C, 4), (Bf, 3)]
-    cCycle n t =
-        delayM ((8-fromIntegral n)*dur final) $ timesM n $ transpose t final
-
-partIII :: Music Pitch
-partIII = tempo (160/120) $
-    p3Ostinado
-    :=: delayM ( 1*p3OstinadoPhraseDur) p3SetA
-    :=: delayM (12*p3OstinadoPhraseDur) p3SetB
-    :=: delayM (26.5*p3OstinadoPhraseDur) p3SetC
 
