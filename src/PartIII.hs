@@ -4,6 +4,8 @@ import Euterpea
 
 import Elements
 
+-- [] Consider dropping the whole part to GMajor, so that the Coil part can
+--    be raised an octave
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- Part III
@@ -30,7 +32,7 @@ p3OstinadoPhraseDur :: Dur
 p3OstinadoPhraseDur = 11 * qn
 
 p3OnCoil :: Music Pitch -> Music Pitch
-p3OnCoil = phrase [Art $ Staccato $ 15/16] . onCoil . transpose 12
+p3OnCoil = phrase [Art $ Staccato $ 15/16] . onCoil
 
 p3SetA :: Music Pitch
 p3SetA = p3OnCoil $ chord
