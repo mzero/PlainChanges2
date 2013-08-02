@@ -5,6 +5,7 @@ import Data.List (isPrefixOf)
 import Euterpea
 import Euterpea.IO.MIDI.MidiIO (getAllDevices)
 
+import Coil as Coil
 import MidiUtil
 import PartI
 import PartII
@@ -51,8 +52,8 @@ mainStagePatchMap = [ (ElectricBassPicked, 0)
 mainStageMidi :: Music Pitch -> Midi
 mainStageMidi m = toMidi (defToPerf m) mainStagePatchMap
 
-extractCoilTrack :: Music Pitch -> Track Ticks
-extractCoilTrack = channelTrack 1 . mainStageMidi
+checkCoilTrack :: Music Pitch -> IO ()
+checkCoilTrack = runCheckChannel 1 Coil.validate . mainStageMidi
 
 playMainStage :: Music Pitch -> IO ()
 playMainStage m = do
