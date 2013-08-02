@@ -1,0 +1,19 @@
+Name:            plainchanges2
+Version:         1.0.0.0
+Author:          Mark Lentczner
+Maintainer:      markl@glyphic.com
+Build-type:      Simple
+Cabal-version:   >=1.8
+
+
+Executable plainchanges2
+  Main-is: Main.hs
+  hs-source-dirs: src
+
+  Build-depends:
+    base,
+    transformers,
+    Euterpea,
+    HCodecs
+
+  ghc-options: -Wall -fwarn-tabs -fno-warn-name-shadowing -fno-warn-unused-binds

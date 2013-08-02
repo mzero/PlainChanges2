@@ -3,7 +3,6 @@ module PlainChanges2 where
 import Codec.Midi
 import Data.List (isPrefixOf)
 import Euterpea
-import Euterpea.IO.MIDI
 import Euterpea.IO.MIDI.MidiIO (getAllDevices)
 
 import MidiUtil
