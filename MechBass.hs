@@ -1,6 +1,18 @@
 module MechBass where
 
-import Codec.Midi (Time)
+import Codec.Midi (Key, Time)
+
+data BassString = BassString { stringLoKey, stringHiKey :: !Key }
+
+bassStrings :: [BassString] -- lowest pitch
+bassStrings = map (\lo -> BassString lo (lo + numFrets - 1)) notes
+  where
+    notes = [ 28, 33, 38, 43 ] -- (E,2), ((A,2), (D,3), (G,3)
+    numFrets = 13
+
+eString, aString, dString, gString :: BassString
+[eString, aString, dString, gString] = bassStrings
+
 
 rawShifterTimes :: [[Time]]
 rawShifterTimes =
@@ -22,4 +34,61 @@ rawShifterTimes =
 
 shifterTime :: Int -> Int -> Time
 shifterTime startFret endFret = (rawShifterTimes !! endFret) !! startFret
+
+
+{-
+Things to validate:
+
+    Single String tracks
+    1) all notes on playable range for that string
+    2) only one note at a time
+    3) note on, vel > 1, shifter finishes before end of note
+    4) note on, vel 1, after note off
+    5) first note assume maximal travel
+-}
+
+type Fret = Int
+
+data ShifterState = ShifterUnknown | ShifterAt Fret | ShifterMoving Fret Time
+    deriving (Eq)
+
+data SoundState = SoundDamped | SoundPlucked Time Time
+
+type StringState = (ShifterState, SoundState)
+
+{-
+validate :: String -> M.Track M.Time -> CheckResult
+validate (String lo hi) = execChecker . go initialState
+  where
+    lo = stringLoKey st
+    hi = stringHiKey st
+    initialState = (ShifterUnknown, SoundDamped)
+
+    go (sh, so) ((t, M.NoteOn _ key _):es) = do
+        check t (lo <= key) "not too low"
+        check t (key <= hi) "not too high"
+        go (sh, so) es
+-}
+
+{-
+positioner:
+    1) compute time to shift from previous note
+    2) if positioner message after previous note off, output it
+    3) else if previous note off - shift time > reasonable note length
+        3a) shorten previous note
+        3b) output positiononer message
+    4) else if previous note off earlier, output positioner after that
+    5) else don't output positioner!
+
+    position at
+        thisStart - shiftTime
+
+-}
+
+
+{-
+allocator
+-}
+
+
 

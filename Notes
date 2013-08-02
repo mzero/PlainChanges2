@@ -14,7 +14,9 @@ MechBass
         A - (A,2) ~ (As, 3)
         E - (E,2) ~ (F, 3)
 
-
+Coil
+    - range: upto 800Hz
+        (G,6) - MIDI 79 - 784Hz
 
 
 Ideas for part I

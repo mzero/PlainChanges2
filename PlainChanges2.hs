@@ -8,6 +8,9 @@ import Euterpea.IO.MIDI
 import Euterpea.IO.MIDI.MidiIO (getAllDevices)
 
 import Changes
+import Coil
+import MechBass
+import MidiUtil
 
 {-
     preamble - base "ring up"
@@ -97,26 +100,25 @@ mainStagePatchMap = [ (ElectricBassPicked, 0)
                     , (Percussion, 9)
                     ]
 
+mainStageMidi :: Music Pitch -> Midi
+mainStageMidi m = toMidi (defToPerf m) mainStagePatchMap
+
+extractCoilTrack :: Music Pitch -> Track Ticks
+extractCoilTrack = channelTrack 1 . mainStageMidi
+
 playMainStage :: Music Pitch -> IO ()
 playMainStage m = do
     devs <- getAllDevices
     case findIacOutput devs of
-        ((iacOut,_):_) -> playMidi iacOut $ toMidi (defToPerf m) mainStagePatchMap
+        ((iacOut,_):_) -> playMidi iacOut $ mainStageMidi m
         [] -> putStrLn "*** No IAC Driver output found"
   where
     findIacOutput = filter (namedIAC . snd) .  filter (output . snd)
     namedIAC = ("IAC Driver" `isPrefixOf`) . name
 
 writeMidiFile :: FilePath -> Music Pitch -> IO ()
-writeMidiFile fp m = exportFile fp $ toMidi (defToPerf m) mainStagePatchMap
+writeMidiFile fp = exportFile fp . mainStageMidi
 
-bassStrings :: [(Pitch, Pitch)] -- lowest pitch, highest pitch
-bassStrings =
-    [ ((E,2), (F, 3))
-    , ((A,2), (As, 3))
-    , ((D,3), (Ds, 4))
-    , ((G,3), (Gs, 4))
-    ]
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- Preamble & Part I
