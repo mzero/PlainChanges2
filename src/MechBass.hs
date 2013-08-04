@@ -1,6 +1,11 @@
 module MechBass where
 
 import Codec.Midi (Key, Time)
+import qualified Codec.Midi as M
+import Data.List (mapAccumL)
+import Data.Maybe (isJust, isNothing)
+
+import MidiUtil
 
 data BassString = BassString { stringLoKey, stringHiKey :: !Key }
 
@@ -14,6 +19,15 @@ eString, aString, dString, gString :: BassString
 [eString, aString, dString, gString] = bassStrings
 
 
+type Fret = Int             -- zero is lowest note on string
+
+fretForKey :: BassString -> Key -> Maybe Fret
+fretForKey bs k = if stringLoKey bs <= k && k <= stringHiKey bs
+                    then Just (k - stringLoKey bs)
+                    else Nothing
+
+
+-- | Columns are "from fret", rows are "to fret"
 rawShifterTimes :: [[Time]]
 rawShifterTimes =
     [ [   0, 101, 156, 187, 215, 240, 265, 284, 301, 316, 332, 344, 357, 369 ]
@@ -32,8 +46,70 @@ rawShifterTimes =
     , [ 370, 345, 323, 296, 274, 253, 235, 214, 189, 165, 138, 104,  68,   0 ]
     ]
 
+shifterTimes :: [[Time]]
+shifterTimes = map (map (* 1.15)) rawShifterTimes
+
+-- | Time it takes to shift from one fret to another
 shifterTime :: Int -> Int -> Time
-shifterTime startFret endFret = (rawShifterTimes !! endFret) !! startFret
+shifterTime startFret endFret = (shifterTimes !! endFret) !! startFret
+
+-- | Maximum time it takes to shift to a fret
+shifterMaxTime :: Int -> Time
+shifterMaxTime endFret = maximum (shifterTimes !! endFret)
+
+
+
+data StringState
+    = Unknown                   -- no sound, location of shifter unknown
+    | Damped Fret               -- no sound, shifter at fret
+    | Shifting Fret Time Bool   -- moving to fret, arrives at given time
+                                -- the bool indicates if pluck on arrival
+    | Plucked Fret Time         -- sounding note, plucked at given time
+  deriving (Eq, Show)
+
+playingFret :: StringState -> Maybe Fret
+playingFret (Shifting f _ True) = Just f
+playingFret (Plucked f _) = Just f
+playingFret _ = Nothing
+
+updateState :: Time -> StringState -> StringState
+updateState te (Shifting f t p) | t <= te = if p then Plucked f t else Damped f
+updateState _ st = st
+
+stringEvent :: BassString -> Time -> M.Message -> StringState -> StringState
+stringEvent bs te ev s0 = case ev of
+    M.NoteOn _ key vel | vel <= 1   -> preposition `onKey` key
+                       | otherwise  -> startNote `onKey` key
+    M.NoteOff _ key _               -> stopNote `onKey` key
+    _ -> st
+  where
+    st = updateState te s0
+
+    mod `onKey` key = maybe s0 mod $ fretForKey bs key
+
+    preposition f1 = case st of
+        Unknown         -> positionFromUnknown f1
+        Damped f0       -> positionFrom f0 f1
+        Shifting f0 _ _ -> if f0 == f1 then st else positionFromUnknown f1
+        Plucked f0 _    -> positionFrom f0 f1
+
+    positionFromUnknown f1 = Shifting f1 (te + shifterMaxTime f1) False
+    positionFrom f0 f1 | f0 == f1  = Damped f1
+                       | otherwise = Shifting f1 (te + shifterTime f0 f1) False
+
+    startNote f1 = case preposition f1 of
+        Unknown         -> error "preposition left string Unknown"
+        Damped f        -> Plucked f te
+        Plucked f _     -> Plucked f te
+        Shifting f t _  -> Shifting f t True
+
+    stopNote f1 = case st of
+        Shifting f0 _ _ | f0 == f1 -> Unknown
+        Plucked f0 _    | f0 == f1 -> Damped f1
+        _ -> st
+
+
+
 
 
 {-
@@ -47,28 +123,32 @@ Things to validate:
     5) first note assume maximal travel
 -}
 
-type Fret = Int
 
-data ShifterState = ShifterUnknown | ShifterAt Fret | ShifterMoving Fret Time
-    deriving (Eq)
+data MechBassError
+    = NotMonophonic
+    | BadNoteOff
+    | KeyOutOfRange Key
+    | StartsLate Time
+    | FretTooLate Time
 
-data SoundState = SoundDamped | SoundPlucked Time Time
-
-type StringState = (ShifterState, SoundState)
-
-{-
-validate :: String -> M.Track M.Time -> CheckResult
-validate (String lo hi) = execChecker . go initialState
+validate :: BassString -> TrackChecker MechBassError
+validate bs = go Unknown
   where
-    lo = stringLoKey st
-    hi = stringHiKey st
-    initialState = (ShifterUnknown, SoundDamped)
-
-    go (sh, so) ((t, M.NoteOn _ key _):es) = do
-        check t (lo <= key) "not too low"
-        check t (key <= hi) "not too high"
-        go (sh, so) es
--}
+    go s0 ((te, ev):es) =
+        let stBefore = updateState te s0
+            stAfter = stringEvent bs te ev stBefore
+            pFret = playingFret stBefore
+        in do
+            case ev of
+                M.NoteOn _ key _ -> do
+                    check te (isJust $ fretForKey bs key) $ KeyOutOfRange key
+                    check te (isNothing pFret) $ NotMonophonic
+                M.NoteOff _ key _ -> do
+                    check te (isJust $ fretForKey bs key) $ KeyOutOfRange key
+                    check te (pFret == fretForKey bs key) $ BadNoteOff
+                _ -> okay
+            go stAfter es
+    go _ [] = okay
 
 {-
 positioner:
@@ -83,12 +163,23 @@ positioner:
     position at
         thisStart - shiftTime
 
+
+type AllocatorState = [StringState]
+
+allocator :: M.Track Time -> M.Track Time
+allocator = snd . mapAccumL go initialAllocatorState
+  where
+    initialAllocatorState = map (const Unknown) bassStrings
+    go as (t, M.NoteOn _ key 1) = undefined
+        -- allocate string s, [errors]:
+        --      matchStrings as bs key
+        --          if key out of range -> nope
+        --          if string damped -> Avail (fretTime existingFret (fret key s))
+        --          if string plucked -> Steal (fretTime exisitngFret (fret key s) (time - playTime)
+        --      s = pickBest
+        --      (t, M.Note (ch s) key 1)
+        --      shifterState = ShifterMoving fret (time + fretTime)
+        --      stringState = SoundDamped
+
 -}
-
-
-{-
-allocator
--}
-
-
 
