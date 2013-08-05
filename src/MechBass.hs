@@ -1,9 +1,16 @@
-module MechBass where
+module MechBass
+    ( BassString()
+    , bassStrings
+    , validate
+    , allocator
+    )
+where
 
 import Codec.Midi (Key, Time)
 import qualified Codec.Midi as M
 import Data.List (mapAccumL)
 import Data.Maybe (isJust, isNothing)
+import qualified Data.Map.Strict as Map
 
 import MidiUtil
 
@@ -130,6 +137,7 @@ data MechBassError
     | KeyOutOfRange Key
     | StartsLate Time
     | FretTooLate Time
+  deriving (Eq, Show)
 
 validate :: BassString -> TrackChecker MechBassError
 validate bs = go Unknown
@@ -162,24 +170,52 @@ positioner:
 
     position at
         thisStart - shiftTime
+-}
 
 
-type AllocatorState = [StringState]
+data Allocation = Available Time | Steal Time Time
+    deriving (Eq, Show)
 
+instance Ord Allocation where
+    compare (Available t) (Available v) = compare v t -- shorter is better
+    compare (Available _) _ = GT
+    compare _ (Available _) = LT
+    compare (Steal s t) (Steal u v) = compare (s - t) (u - v) -- longer is better
+
+data AllocState = AllocState { asKey :: Maybe Key
+                             , asString :: BassString
+                             , asState :: StringState
+                             }
+
+-- | Allocate notes to channels 0..3.
+-- Assumes well formed note events, w/o prepositioning events.
 allocator :: M.Track Time -> M.Track Time
 allocator = snd . mapAccumL go initialAllocatorState
   where
-    initialAllocatorState = map (const Unknown) bassStrings
-    go as (t, M.NoteOn _ key 1) = undefined
-        -- allocate string s, [errors]:
-        --      matchStrings as bs key
-        --          if key out of range -> nope
-        --          if string damped -> Avail (fretTime existingFret (fret key s))
-        --          if string plucked -> Steal (fretTime exisitngFret (fret key s) (time - playTime)
-        --      s = pickBest
-        --      (t, M.Note (ch s) key 1)
-        --      shifterState = ShifterMoving fret (time + fretTime)
-        --      stringState = SoundDamped
+    initialAllocatorState = Map.fromList $ zip [0..]
+        $ map (\bs -> AllocState Nothing bs Unknown) bassStrings
 
--}
+    go as (te, M.NoteOn _ key vel) =
+        case pickBest $ findOptions key as of
+            Nothing -> undefined
+            Just (_, ch) -> output as te ch (M.NoteOn ch key vel) (Just key)
+    go as (te, M.NoteOff _ key vel) =
+        case Map.toList $ Map.filter (\a -> asKey a == Just key) as of
+            [] -> undefined
+            ((ch, _):_) -> output as te ch (M.NoteOff ch key vel) Nothing
+    go as teev = (as, teev)
+
+    findOptions key = Map.mapMaybe (optionKey key)
+    optionKey key as =
+        optionFret (asState as) `fmap` fretForKey (asString as) key
+    optionFret Unknown              f1 = Available (shifterMaxTime f1)
+    optionFret (Damped f0)          f1 = Available (shifterTime f0 f1)
+    optionFret (Shifting f0 t _)    f1 = Steal t (shifterTime f0 f1)
+    optionFret (Plucked f0 t)       f1 = Steal t (shifterTime f0 f1)
+
+    pickBest = Map.foldlWithKey (\a ch opt -> a `max` Just (opt, ch)) Nothing
+
+    output as te ch ev k =
+        (Map.adjust (\a -> a { asKey = k, asState = stringEvent (asString a) te ev (asState a) }) ch as, (te, ev))
+
 

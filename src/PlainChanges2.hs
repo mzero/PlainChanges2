@@ -5,7 +5,8 @@ import Data.List (isPrefixOf)
 import Euterpea
 import Euterpea.IO.MIDI.MidiIO (getAllDevices)
 
-import Coil as Coil
+import qualified Coil
+import qualified MechBass
 import MidiUtil
 import PartI
 import PartII
@@ -42,10 +43,10 @@ plainChanges2_30 =
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
 mainStagePatchMap :: UserPatchMap   -- N.B.: 0-based midi channels!
-mainStagePatchMap = [ (ElectricBassPicked, 0)
-                    , (Lead2Sawtooth, 1)
-                    , (TubularBells, 2)
-                    , (ChoirAahs, 3)
+mainStagePatchMap = [ (ElectricBassPicked, 4)
+                    , (Lead2Sawtooth, 5)
+                    , (TubularBells, 6)
+                    , (ChoirAahs, 7)
                     , (Percussion, 9)
                     ]
 
@@ -53,7 +54,7 @@ mainStageMidi :: Music Pitch -> Midi
 mainStageMidi m = toMidi (defToPerf m) mainStagePatchMap
 
 checkCoilTrack :: Music Pitch -> IO ()
-checkCoilTrack = runCheckChannel 1 Coil.validate . mainStageMidi
+checkCoilTrack = runCheckChannel 5 Coil.validate . mainStageMidi
 
 playMainStage :: Music Pitch -> IO ()
 playMainStage m = do
@@ -68,4 +69,12 @@ playMainStage m = do
 writeMidiFile :: FilePath -> Music Pitch -> IO ()
 writeMidiFile fp = exportFile fp . mainStageMidi
 
+allocateBass :: Music Pitch -> Midi
+allocateBass = processChannel MechBass.allocator 4 . mainStageMidi
+
+validateBassMidi :: Music Pitch -> IO ()
+validateBassMidi m = mapM_ run $ zip [0..] MechBass.bassStrings
+  where
+    run (ch, bs) = runCheckChannel ch (MechBass.validate bs) midi
+    midi = allocateBass m
 

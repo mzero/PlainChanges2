@@ -12,6 +12,7 @@ Executable plainchanges2
 
   Build-depends:
     base,
+    containers,
     transformers,
     Euterpea,
     HCodecs
