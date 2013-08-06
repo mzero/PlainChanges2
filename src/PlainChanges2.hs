@@ -69,12 +69,18 @@ playMainStage m = do
 writeMidiFile :: FilePath -> Music Pitch -> IO ()
 writeMidiFile fp = exportFile fp . mainStageMidi
 
-allocateBass :: Music Pitch -> Midi
+allocateBass :: Music Pitch -> (MechBass.AllocMessages, Midi)
 allocateBass = processChannel MechBass.allocator 4 . mainStageMidi
 
 validateBassMidi :: Music Pitch -> IO ()
-validateBassMidi m = mapM_ run $ zip [0..] MechBass.bassStrings
+validateBassMidi m = do
+    putStrLn "-- Allocation --"
+    mapM_ print msgs
+    putStrLn "-- Validation --"
+    mapM_ run $ zip [0..] MechBass.bassStrings
   where
-    run (ch, bs) = runCheckChannel ch (MechBass.validate bs) midi
-    midi = allocateBass m
+    (msgs, midi) = allocateBass m
+    run (ch, bs) = do
+        putStrLn $ "-- Channel " ++ show ch ++ " --"
+        runCheckChannel ch (MechBass.validate bs) midi
 

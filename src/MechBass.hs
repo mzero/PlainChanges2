@@ -2,6 +2,7 @@ module MechBass
     ( BassString()
     , bassStrings
     , validate
+    , AllocMessages
     , allocator
     )
 where
@@ -9,7 +10,7 @@ where
 import Codec.Midi (Key, Time)
 import qualified Codec.Midi as M
 import Data.List (mapAccumL)
-import Data.Maybe (isJust, isNothing)
+import Data.Maybe (catMaybes, isJust, isNothing)
 import qualified Data.Map.Strict as Map
 
 import MidiUtil
@@ -176,6 +177,11 @@ positioner:
 data Allocation = Available Time | Steal Time Time
     deriving (Eq, Show)
 
+data AllocMsg = Unplayable Key
+              | UnmatchedNoteOff Key
+              | StolenNote M.Channel Key Time
+    deriving (Eq, Show)
+
 instance Ord Allocation where
     compare (Available t) (Available v) = compare v t -- shorter is better
     compare (Available _) _ = GT
@@ -187,23 +193,33 @@ data AllocState = AllocState { asKey :: Maybe Key
                              , asState :: StringState
                              }
 
+type AllocMessages = [(Time, AllocMsg)]
+
 -- | Allocate notes to channels 0..3.
 -- Assumes well formed note events, w/o prepositioning events.
-allocator :: M.Track Time -> M.Track Time
-allocator = snd . mapAccumL go initialAllocatorState
+allocator :: M.Track Time -> (AllocMessages, M.Track Time)
+allocator = postProcess . mapAccumL go ([], initialAllocatorState)
   where
     initialAllocatorState = Map.fromList $ zip [0..]
         $ map (\bs -> AllocState Nothing bs Unknown) bassStrings
+    postProcess ((msgs, _), mtrk) = (reverse msgs, catMaybes mtrk)
 
-    go as (te, M.NoteOn _ key vel) =
+    go s@(_, as) (te, M.NoteOn _ key vel) =
         case pickBest $ findOptions key as of
-            Nothing -> undefined
-            Just (_, ch) -> output as te ch (M.NoteOn ch key vel) (Just key)
-    go as (te, M.NoteOff _ key vel) =
+            Nothing ->
+                message s te (Unplayable key)
+            Just (Available _, ch) ->
+                output s te ch (M.NoteOn ch key vel) (Just key) Nothing
+            Just (Steal tn ts, ch) ->
+                output s te ch (M.NoteOn ch key vel) (Just key)
+                    (Just (StolenNote ch key (tn - te - ts)))
+    go s@(_, as) (te, M.NoteOff _ key vel) =
         case Map.toList $ Map.filter (\a -> asKey a == Just key) as of
-            [] -> undefined
-            ((ch, _):_) -> output as te ch (M.NoteOff ch key vel) Nothing
-    go as teev = (as, teev)
+            [] ->
+                message s te (UnmatchedNoteOff key)
+            ((ch, _):_) ->
+                output s te ch (M.NoteOff ch key vel) Nothing Nothing
+    go s teev = (s, Just teev)
 
     findOptions key = Map.mapMaybe (optionKey key)
     optionKey key as =
@@ -215,7 +231,10 @@ allocator = snd . mapAccumL go initialAllocatorState
 
     pickBest = Map.foldlWithKey (\a ch opt -> a `max` Just (opt, ch)) Nothing
 
-    output as te ch ev k =
-        (Map.adjust (\a -> a { asKey = k, asState = stringEvent (asString a) te ev (asState a) }) ch as, (te, ev))
-
+    output (msgs, as) te ch ev k mm =
+        let f a = a { asKey = k,
+                      asState = stringEvent (asString a) te ev (asState a) }
+            mf = maybe id (\m -> ((te, m):)) mm
+        in ((mf msgs, Map.adjust f ch as), Just (te, ev))
+    message (msgs, as) te m = (((te, m):msgs, as), Nothing)
 

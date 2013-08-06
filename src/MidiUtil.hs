@@ -96,10 +96,12 @@ runCheckChannel ch chkr midi = case checkChannel ch chkr midi of
     Right () -> print "PASSED"
 
 
-processChannel :: (M.Track Time -> M.Track Time) -> M.Channel -> M.Midi -> M.Midi
-processChannel f ch midi = midi { fileType = ft, tracks = f' chTrack : otherTracks }
+processChannel :: (M.Track Time -> (a, M.Track Time)) -> M.Channel -> M.Midi -> (a, M.Midi)
+processChannel f ch midi = (a, midi')
   where
     (chTrack, otherTracks) = partitionChannel ch $ tracks midi
+    (a, chTrack') = f . toRealTime td . toAbsTime $ chTrack
+    chTrack'' = fromAbsTime . fromRealTime td $ chTrack'
+    midi' = midi { fileType = ft, tracks = chTrack'' : otherTracks }
     ft = if null otherTracks then SingleTrack else MultiTrack
-    f' = fromAbsTime . fromRealTime td . f . toRealTime td . toAbsTime
     td = timeDiv midi
