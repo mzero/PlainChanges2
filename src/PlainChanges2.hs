@@ -84,3 +84,13 @@ validateBassMidi m = do
         putStrLn $ "-- Channel " ++ show ch ++ " --"
         runCheckChannel ch (MechBass.validate bs) midi
 
+debugBass :: String -> Music Pitch -> IO ()
+debugBass prefix m = do
+    writeFile ("dump-" ++ prefix ++ "-pretalloc.txt")
+        $ unlines $ dumpMidi $ mainStageMidi m
+    writeFile ("dump-" ++ prefix ++ "-postalloc.txt")
+        $ unlines $ dumpMidi $ snd $ allocateBass m
+    validateBassMidi m
+
+
+

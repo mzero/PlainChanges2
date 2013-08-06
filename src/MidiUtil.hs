@@ -7,12 +7,15 @@ module MidiUtil
     , TrackChecker
     , checkChannel, runCheckChannel
     , processChannel
+
+    , dumpMidi
     )
 where
 
 import Codec.Midi as M
 import Control.Monad.Trans.Writer (Writer, execWriter, tell)
 import Data.List (foldl', partition)
+import Text.Printf (printf)
 
 
 type Checker err = Writer [(M.Time, err)] ()
@@ -43,10 +46,11 @@ partitionChannel ch trks = (chTrk, noChTrks)
   where
     (trks', noChTrks1) = partition (trackHasChannel ch) trks
     (mixedTracks, chTrks1) = partition (trackHasOtherChannel ch) trks'
-    (chTrks2, noChTrks2) = unzip $
-        map (partition $ messageOnChannel ch . snd) mixedTracks
+    (chTrks2, noChTrks2) = unzip $ map splitter mixedTracks
     chTrk = foldl' M.merge [] $ chTrks1 ++ chTrks2
     noChTrks = noChTrks1 ++ noChTrks2
+    splitter = fromAbsTime2 . partition (messageOnChannel ch . snd) . toAbsTime
+    fromAbsTime2 (a, b) = (fromAbsTime a, fromAbsTime b)
 
 -- | Does a track have events on a given channel.
 trackHasChannel :: M.Channel -> M.Track a -> Bool
@@ -68,14 +72,13 @@ messageChannel :: M.Message -> Maybe M.Channel
 messageChannel m = if M.isChannelMessage m then Just (M.channel m) else Nothing
 
 
-prop_partitionGetsAll :: (Num a, Ord a) => [M.Track a] -> Bool
+prop_partitionGetsAll :: [M.Track M.Ticks] -> Bool
 prop_partitionGetsAll =
     not . trackHasChannel 0 . concat . snd . partitionChannel 0
 
-prop_partitionHasOnly :: (Num a, Ord a) => [M.Track a] -> Bool
+prop_partitionHasOnly :: [M.Track M.Ticks] -> Bool
 prop_partitionHasOnly =
     not . trackHasOtherChannel 0 . fst . partitionChannel 0
-
 
 extractChannel :: M.Channel -> M.Midi -> M.Track M.Ticks
 extractChannel ch = fst . partitionChannel ch . tracks
@@ -105,3 +108,24 @@ processChannel f ch midi = (a, midi')
     midi' = midi { fileType = ft, tracks = chTrack'' : otherTracks }
     ft = if null otherTracks then SingleTrack else MultiTrack
     td = timeDiv midi
+
+
+dumpMidi :: M.Midi -> [String]
+dumpMidi midi = show (fileType midi) : show (timeDiv midi) : showTracks
+  where
+    showTracks = concat $ zipWith showTrack [(0::Int)..] $ tracks midi
+    showTrack n tr =
+        (printf "==Track %2d" n ++ concatMap (printf ":ch%2d") [0..15::Int])
+        : map showEvent (toRealTime (timeDiv midi) $ toAbsTime tr)
+    showEvent (te, ev) = printf "%10.3f " te ++ case ev of
+        NoteOff ch k v          -> indent ch ++ "-" ++ key k ++ val v
+        NoteOn ch k v           -> indent ch ++ "⬥" ++ key k ++ val v
+        KeyPressure ch k v      -> indent ch ++ "⬎" ++ key k ++ val v
+        ControlChange ch n v    -> indent ch ++ "cc" ++ val n ++ val v
+        ProgramChange ch n      -> indent ch ++ "#" ++ val n
+        ChannelPressure ch p    -> indent ch ++ "⬎⬎" ++ val p
+        PitchWheel ch p         -> indent ch ++ "⦵ " ++ show p
+        _ -> show ev
+    indent ch = replicate (5*ch) ' '
+    key = printf " %2d"
+    val = printf " %3d"
