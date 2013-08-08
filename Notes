@@ -15,7 +15,6 @@ MechBass
         E - (E,2) ~ (F, 3)
 
 
-
 Nothing
 NoteOn, awating NoteOff
 NoteOn, turned off, swallow NoteOff
@@ -35,7 +34,16 @@ data AllocState =
 
 
 
-
+[] track sort is messed up
+[] what's up with unmatched note offs
+[] why doesn't partII validate?
+[] remove text from track
+[] partII with per string rings
+    [] allocator on only one string
+    [] run allocator over each ch individually
+[] play from allocated parts
+    [] combine ch 0-3 back to 4
+    [] remove pre-positioning
 
 
 

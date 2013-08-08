@@ -9,6 +9,7 @@ import Control.Monad.Trans.State.Strict
 import Data.Function (on)
 import Data.List (maximumBy, sortBy)
 import qualified Data.Map.Strict as Map
+import Text.Printf (printf)
 
 import MechBass
 import MidiUtil (orderEvents)
@@ -39,8 +40,14 @@ initialAllocatorState =
 
 data AllocMsg = Unplayable Key
               | UnmatchedNoteOff Key
-              | StolenNote Channel Key Time
-    deriving (Eq, Show)
+              | StolenNote Channel Key Time Time
+    deriving (Eq)
+
+instance Show AllocMsg where
+    show (Unplayable k) = "Unplayable " ++ show k
+    show (UnmatchedNoteOff k) = "UnmatchedNoteOff " ++ show k
+    show (StolenNote ch k tOrig tShort) =
+        printf "Stolen Note %d %d : %.3f -> %.3f" ch k tOrig tShort
 
 type AllocMessages = [(Time, AllocMsg)]
 
@@ -69,8 +76,8 @@ dropNoteOff key = modify (\s -> s { asOffActions = Map.delete key $ asOffActions
 
 
 data Allocation = Unavailable
-                | Available
                 | Steal Time        -- length of shortend, stolen note
+                | Available
     deriving (Eq, Ord, Show)
 
 
@@ -109,8 +116,7 @@ allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
 
         Playing f0 tOn k -> case te - shifterTime f0 f1 of
             ts | tOn < ts -> (Steal (ts - tOn), do
-                    outputMessage ts $ StolenNote ch k tOn
-                    onNoteOff key (\_ vOff -> outputEvent ts (NoteOff ch key vOff))
+                    onNoteOff key $ truncatedNoteOff ch tOn k ts
                     playNote ch ts f1
                     )
                | otherwise -> unavailable
@@ -121,8 +127,7 @@ allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
                      playNote ch ts f1
                      )
                | tOn <= ts -> (Steal (tOn - ts), do
-                    outputMessage ts $ StolenNote ch k tOn
-                    outputEvent ts (NoteOff ch k vOff)
+                    truncatedNoteOff ch tOn k ts tOff vOff
                     playNote ch ts f1
                     )
                | otherwise -> unavailable
@@ -135,4 +140,7 @@ allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
         setPlayState ch (Playing f1 te key) -- note that string is now playing
         onNoteOff key (\tOff vOff -> setPlayState ch (Played f1 te key tOff vOff))
 
+    truncatedNoteOff ch tOn k ts tOff vOff = do
+        outputMessage ts $ StolenNote ch k (tOff - tOn) (ts - tOn)
+        outputEvent ts (NoteOff ch k vOff)
 
