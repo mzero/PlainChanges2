@@ -14,6 +14,31 @@ MechBass
         A - (A,2) ~ (As, 3)
         E - (E,2) ~ (F, 3)
 
+
+
+Nothing
+NoteOn, awating NoteOff
+NoteOn, turned off, swallow NoteOff
+NoteOn, NoteOff seen
+
+data AllocState =
+    AlFree                  -- nothing every played
+    | AlPlaying Time        -- note on seen at time
+    | AlPlayed Time Time    -- note on and off seen
+
+(te, M.NoteOn _ key vel) -> case as of
+  Free -> Available (outputMsgs)
+  Playing k tn | tn < ts -> Steal (ts - tn) (outputMsgs, add swallow noteOff k)
+  Played k v tn to | to <= ts -> Available (outputNoteOff to k v : outputMsgs)
+                     | tn < ts ->  Steal (ts - tn) (outputMsgs, add swallow noteOff k)
+  _ ->Unavailable
+
+
+
+
+
+
+
 Coil
     - range: upto 800Hz
         (G,6) - MIDI 79 - 784Hz

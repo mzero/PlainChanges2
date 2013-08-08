@@ -9,6 +9,8 @@ module MidiUtil
     , processChannel
 
     , dumpMidi
+
+    , orderEvents
     )
 where
 
@@ -129,3 +131,14 @@ dumpMidi midi = show (fileType midi) : show (timeDiv midi) : showTracks
     indent ch = replicate (5*ch) ' '
     key = printf " %2d"
     val = printf " %3d"
+
+
+orderEvents :: (Time, M.Message) -> (Time, M.Message) -> Ordering
+orderEvents (ta, _) (tb, _) | ta < tb = LT
+                            | ta > tb = GT
+orderEvents (_, ma) (_, mb) | not (M.isChannelMessage ma) = LT
+                            | not (M.isChannelMessage mb) = GT
+orderEvents (_, NoteOff _ _ _) _ = LT
+orderEvents _ (_, NoteOff _ _ _) = GT
+orderEvents _ _ = EQ
+

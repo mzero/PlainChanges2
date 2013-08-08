@@ -7,6 +7,7 @@ import Euterpea.IO.MIDI.MidiIO (getAllDevices)
 
 import qualified Coil
 import qualified MechBass
+import qualified MechBassAllocator as MechBass
 import MidiUtil
 import PartI
 import PartII

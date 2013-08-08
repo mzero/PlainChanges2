@@ -1,17 +1,16 @@
 module MechBass
     ( BassString()
     , bassStrings
+    , Fret
+    , fretForKey
+    , shifterTime, shifterMaxTime
     , validate
-    , AllocMessages
-    , allocator
     )
 where
 
 import Codec.Midi (Key, Time)
 import qualified Codec.Midi as M
-import Data.List (mapAccumL)
-import Data.Maybe (catMaybes, isJust, isNothing)
-import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust, isNothing)
 
 import MidiUtil
 
@@ -36,8 +35,8 @@ fretForKey bs k = if stringLoKey bs <= k && k <= stringHiKey bs
 
 
 -- | Columns are "from fret", rows are "to fret"
-rawShifterTimes :: [[Time]]
-rawShifterTimes =
+rawShifterTimesMs :: [[Double]]
+rawShifterTimesMs =
     [ [   0, 101, 156, 187, 215, 240, 265, 284, 301, 316, 332, 344, 357, 369 ]
     , [ 102,   0,  96, 145, 181, 209, 237, 257, 276, 292, 306, 321, 333, 345 ]
     , [ 156,  95,   0,  92, 144, 179, 202, 224, 244, 262, 278, 297, 310, 322 ]
@@ -55,7 +54,7 @@ rawShifterTimes =
     ]
 
 shifterTimes :: [[Time]]
-shifterTimes = map (map (* 1.15)) rawShifterTimes
+shifterTimes = map (map (* (0.001 * 1.15))) rawShifterTimesMs
 
 -- | Time it takes to shift from one fret to another
 shifterTime :: Int -> Int -> Time
@@ -172,69 +171,4 @@ positioner:
     position at
         thisStart - shiftTime
 -}
-
-
-data Allocation = Available Time | Steal Time Time
-    deriving (Eq, Show)
-
-data AllocMsg = Unplayable Key
-              | UnmatchedNoteOff Key
-              | StolenNote M.Channel Key Time
-    deriving (Eq, Show)
-
-instance Ord Allocation where
-    compare (Available t) (Available v) = compare v t -- shorter is better
-    compare (Available _) _ = GT
-    compare _ (Available _) = LT
-    compare (Steal s t) (Steal u v) = compare (s - t) (u - v) -- longer is better
-
-data AllocState = AllocState { asKey :: Maybe Key
-                             , asString :: BassString
-                             , asState :: StringState
-                             }
-
-type AllocMessages = [(Time, AllocMsg)]
-
--- | Allocate notes to channels 0..3.
--- Assumes well formed note events, w/o prepositioning events.
-allocator :: M.Track Time -> (AllocMessages, M.Track Time)
-allocator = postProcess . mapAccumL go ([], initialAllocatorState)
-  where
-    initialAllocatorState = Map.fromList $ zip [0..]
-        $ map (\bs -> AllocState Nothing bs Unknown) bassStrings
-    postProcess ((msgs, _), mtrk) = (reverse msgs, catMaybes mtrk)
-
-    go s@(_, as) (te, M.NoteOn _ key vel) =
-        case pickBest $ findOptions key as of
-            Nothing ->
-                message s te (Unplayable key)
-            Just (Available _, ch) ->
-                output s te ch (M.NoteOn ch key vel) (Just key) Nothing
-            Just (Steal tn ts, ch) ->
-                output s te ch (M.NoteOn ch key vel) (Just key)
-                    (Just (StolenNote ch key (tn - te - ts)))
-    go s@(_, as) (te, M.NoteOff _ key vel) =
-        case Map.toList $ Map.filter (\a -> asKey a == Just key) as of
-            [] ->
-                message s te (UnmatchedNoteOff key)
-            ((ch, _):_) ->
-                output s te ch (M.NoteOff ch key vel) Nothing Nothing
-    go s teev = (s, Just teev)
-
-    findOptions key = Map.mapMaybe (optionKey key)
-    optionKey key as =
-        optionFret (asState as) `fmap` fretForKey (asString as) key
-    optionFret Unknown              f1 = Available (shifterMaxTime f1)
-    optionFret (Damped f0)          f1 = Available (shifterTime f0 f1)
-    optionFret (Shifting f0 t _)    f1 = Steal t (shifterTime f0 f1)
-    optionFret (Plucked f0 t)       f1 = Steal t (shifterTime f0 f1)
-
-    pickBest = Map.foldlWithKey (\a ch opt -> a `max` Just (opt, ch)) Nothing
-
-    output (msgs, as) te ch ev k mm =
-        let f a = a { asKey = k,
-                      asState = stringEvent (asString a) te ev (asState a) }
-            mf = maybe id (\m -> ((te, m):)) mm
-        in ((mf msgs, Map.adjust f ch as), Just (te, ev))
-    message (msgs, as) te m = (((te, m):msgs, as), Nothing)
 
