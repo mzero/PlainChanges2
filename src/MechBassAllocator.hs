@@ -25,9 +25,11 @@ data PerString = Ps { psState :: PlayState
                     , psString :: BassString
                     }
 
+type OffAction = Time -> Velocity -> AllocM ()
+
 data AllocState = As { asEvents :: Track Time
                      , asStrings :: Map.Map Int PerString
-                     , asOffActions :: Map.Map Key (Time -> Velocity -> AllocM ())
+                     , asOffActions :: [(Key, OffAction)]
                      , asMessages :: AllocMessages
                      }
 
@@ -35,7 +37,7 @@ initialAllocatorState :: AllocState
 initialAllocatorState =
     As { asEvents = []
        , asStrings = Map.fromList $ zip [0..] $ map (Ps Free) bassStrings
-       , asOffActions = Map.empty
+       , asOffActions = []
        , asMessages = []
        }
 
@@ -73,11 +75,18 @@ modifyString ch f = modify (\s -> s { asStrings = Map.adjust f ch $ asStrings s 
 setPlayState :: Channel -> PlayState -> AllocM ()
 setPlayState ch ps = modifyString ch (\s -> s { psState = ps })
 
-onNoteOff :: Key -> (Time -> Velocity -> AllocM ()) -> AllocM ()
-onNoteOff key act = modify (\s -> s { asOffActions = Map.insert key act $ asOffActions s })
+onNoteOff :: Key -> OffAction -> AllocM ()
+onNoteOff key act = modify (\s -> s { asOffActions = asOffActions s ++ [(key, act)] })
 
-dropNoteOff :: Key -> AllocM ()
-dropNoteOff key = modify (\s -> s { asOffActions = Map.delete key $ asOffActions s })
+handleNoteOff :: Time -> Key -> Velocity -> AllocM ()
+handleNoteOff te key vel = do
+    es <- gets asOffActions
+    let (as, bs) = break ((== key) . fst) es
+    case bs of
+        [] -> outputMessage te $ UnmatchedNoteOff key
+        ((_, act) : cs) -> do
+            modify (\s -> s { asOffActions = as ++ cs })
+            act te vel
 
 dumpState :: Time -> AllocM ()
 dumpState te = gets asStrings >>= outputMessage te . Dump . showStates
@@ -105,16 +114,9 @@ allocator trk = postProcess $ execState (mapM_ go trk) initialAllocatorState
 
     go' ev@(te, _) = dumpState te >> go ev
 
-    go (te, NoteOn _ key vel) = allocateNoteOn te key vel
-
-    go (te, NoteOff _ key vel) = do
-        acts <- gets asOffActions
-        case Map.lookup key acts of
-            Nothing -> outputMessage te $ UnmatchedNoteOff key
-            Just act -> dropNoteOff key >> act te vel
-
-    go (te, ev) = outputEvent te ev
-
+    go (te, NoteOn _ key vel)   = allocateNoteOn te key vel
+    go (te, NoteOff _ key vel)  = handleNoteOff te key vel
+    go (te, ev)                 = outputEvent te ev
 
 allocateNoteOn :: Time -> Key -> Velocity -> AllocM ()
 allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
@@ -131,7 +133,7 @@ allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
 
         Playing f0 tOn k -> case te - shifterTime f0 f1 of
             ts | tOn < ts -> (Steal (ts - tOn), do
-                    onNoteOff key $ noteOff ch tOn k ts
+                    onNoteOff k $ noteOff ch tOn k ts
                     playNote ch ts f1
                     )
                | otherwise -> unavailable
