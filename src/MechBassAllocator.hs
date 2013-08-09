@@ -128,8 +128,9 @@ data Allocation = Unavailable
 -- | Allocate notes to channels 0..3.
 -- Assumes well formed note events, w/o prepositioning events.
 allocator :: Track Time -> (AllocMessages, Track Time)
-allocator trk = postProcess $ execState (mapM_ go trk) initialAllocatorState
+allocator trk = postProcess $ execState run initialAllocatorState
   where
+    run = mapM_ go trk >> flush
     postProcess as = (reverse $ asMessages as, sortOnTime $ asEvents as)
     sortOnTime = map snd . sortBy (compare `on` fst) . map withOrder
     withOrder ev@(te,msg) = ((te,messageOrder msg),ev)
@@ -139,6 +140,11 @@ allocator trk = postProcess $ execState (mapM_ go trk) initialAllocatorState
     go (te, NoteOn _ key vel)   = allocateNoteOn te key vel
     go (te, NoteOff _ key vel)  = handleNoteOff te key vel
     go (te, ev)                 = outputEvent te ev
+
+    flush = gets asStrings >>= mapM_ flushEvent . Map.toAscList
+    flushEvent (ch, Ps { psState = Played _ _ key tOff vOff }) =
+        outputEvent tOff (NoteOff ch key vOff)
+    flushEvent _ = return ()
 
 allocateNoteOn :: Time -> Key -> Velocity -> AllocM ()
 allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
