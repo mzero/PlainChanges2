@@ -73,25 +73,26 @@ writeMidiFile fp = exportFile fp . mainStageMidi
 allocateBass :: Music Pitch -> (MechBass.AllocMessages, Midi)
 allocateBass = processChannel MechBass.allocator 4 . mainStageMidi
 
-validateBassMidi :: Music Pitch -> IO ()
+validateBassMidi :: Midi -> IO ()
 validateBassMidi m = do
-    putStrLn "-- Allocation --"
-    mapM_ print msgs
-    putStrLn "-- Validation --"
+    putStrLn "== Validation =="
     mapM_ run $ zip [0..] MechBass.bassStrings
   where
-    (msgs, midi) = allocateBass m
     run (ch, bs) = do
         putStrLn $ "-- Channel " ++ show ch ++ " --"
-        runCheckChannel ch (MechBass.validate bs) midi
+        runCheckChannel ch (MechBass.validate bs) m
 
 debugBass :: String -> Music Pitch -> IO ()
 debugBass prefix m = do
-    writeFile ("dump-" ++ prefix ++ "-pretalloc.txt")
+    writeFile ("dump/" ++ prefix ++ "-pretalloc.txt")
         $ unlines $ dumpMidi $ mainStageMidi m
-    writeFile ("dump-" ++ prefix ++ "-postalloc.txt")
-        $ unlines $ dumpMidi $ snd $ allocateBass m
-    validateBassMidi m
+    writeFile ("dump/" ++ prefix ++ "-postalloc.txt")
+        $ unlines $ dumpMidi $ mPost
+    writeFile ("dump/" ++ prefix ++ "-alloclog.txt")
+        $ unlines $ showErrorMessages msgs
+    validateBassMidi mPost
+  where
+    (msgs, mPost) = allocateBass m
 
 
 

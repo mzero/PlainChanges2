@@ -8,6 +8,7 @@ module MidiUtil
     , checkChannel, runCheckChannel
     , processChannel
 
+    , showErrorMessages
     , dumpMidi
 
     , messageOrder
@@ -98,8 +99,11 @@ checkChannel ch chkr midi = execChecker $ chkr $ convert chTrack
 
 runCheckChannel :: (Show err) => M.Channel -> TrackChecker err -> M.Midi -> IO ()
 runCheckChannel ch chkr midi = case checkChannel ch chkr midi of
-    Left errs -> mapM_ print errs
+    Left errs -> mapM_ putStrLn $ showErrorMessages errs
     Right () -> print "PASSED"
+
+showErrorMessages :: (Show err) => [(Time, err)] -> [String]
+showErrorMessages = map (\(t,e) -> printf "%8.3f %s" t $ show e)
 
 
 processChannel :: (M.Track Time -> (a, M.Track Time)) -> M.Channel -> M.Midi -> (a, M.Midi)

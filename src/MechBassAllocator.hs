@@ -42,6 +42,7 @@ initialAllocatorState =
 data AllocMsg = Unplayable Key
               | UnmatchedNoteOff Key
               | StolenNote Channel Key Time Time
+              | Dump String
     deriving (Eq)
 
 instance Show AllocMsg where
@@ -49,6 +50,7 @@ instance Show AllocMsg where
     show (UnmatchedNoteOff k) = "UnmatchedNoteOff " ++ show k
     show (StolenNote ch k tOrig tShort) =
         printf "Stolen Note %d %d : %.3f -> %.3f" ch k tOrig tShort
+    show (Dump s) = "Dump " ++ s
 
 type AllocMessages = [(Time, AllocMsg)]
 
@@ -61,7 +63,9 @@ outputEvent te ev = modify (\s -> s { asEvents = (te,ev) : asEvents s })
 outputMessage :: Time -> AllocMsg -> AllocM ()
 outputMessage te am = do
     modify (\s -> s { asMessages = (te,am) : asMessages s })
-    outputEvent te $ Text $ show am
+    case am of
+        Dump _ -> return ()
+        _ -> outputEvent te $ Text $ show am
 
 modifyString :: Channel -> (PerString -> PerString) -> AllocM ()
 modifyString ch f = modify (\s -> s { asStrings = Map.adjust f ch $ asStrings s })
@@ -76,7 +80,7 @@ dropNoteOff :: Key -> AllocM ()
 dropNoteOff key = modify (\s -> s { asOffActions = Map.delete key $ asOffActions s })
 
 dumpState :: Time -> AllocM ()
-dumpState te = gets asStrings >>= outputEvent te . Text . showStates
+dumpState te = gets asStrings >>= outputMessage te . Dump . showStates
   where
     showStates = intercalate " / " . map (showState . psState . snd) . Map.toAscList
     showState Free = "Free"
