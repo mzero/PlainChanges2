@@ -29,7 +29,7 @@ type OffAction = Time -> Velocity -> AllocM ()
 
 data AllocState = As { asEvents :: Track Time
                      , asStrings :: Map.Map Int PerString
-                     , asOffActions :: [(Key, OffAction)]
+                     , asOffActions :: [((Key, Maybe Channel), OffAction)]
                      , asMessages :: AllocMessages
                      }
 
@@ -75,18 +75,40 @@ modifyString ch f = modify (\s -> s { asStrings = Map.adjust f ch $ asStrings s 
 setPlayState :: Channel -> PlayState -> AllocM ()
 setPlayState ch ps = modifyString ch (\s -> s { psState = ps })
 
-onNoteOff :: Key -> OffAction -> AllocM ()
-onNoteOff key act = modify (\s -> s { asOffActions = asOffActions s ++ [(key, act)] })
+addNoteOff :: (Key, Maybe Channel) -> OffAction -> AllocM ()
+addNoteOff kc act = modify (\s -> s { asOffActions = asOffActions s ++ [(kc, act)] })
+
+removeNoteOff :: ((Key, Maybe Channel) -> Bool) -> AllocM (Maybe OffAction)
+removeNoteOff p = do
+    es <- gets asOffActions
+    let (as, bs) = break (p . fst) es
+    case bs of
+        [] -> return Nothing
+        ((_, act) : cs) -> do
+            modify (\s -> s { asOffActions = as ++ cs })
+            return $ Just act
+
+onNoteOffPlaying :: Key -> Channel -> OffAction -> AllocM ()
+onNoteOffPlaying k c = addNoteOff (k, Just c)
+
+onNoteOffStolen :: Key -> Channel -> OffAction -> AllocM ()
+onNoteOffStolen k c act = do
+    es <- gets asOffActions
+    let (as, bs) = break ((== (k, Just c)) . fst) es
+    case bs of
+        [] -> return ()
+        (_ : cs) -> do
+            modify (\s -> s { asOffActions = as ++ ((k, Nothing), act) : cs })
+
+onNoteOffMisc :: Key -> OffAction -> AllocM ()
+onNoteOffMisc k = addNoteOff (k, Nothing)
 
 handleNoteOff :: Time -> Key -> Velocity -> AllocM ()
 handleNoteOff te key vel = do
-    es <- gets asOffActions
-    let (as, bs) = break ((== key) . fst) es
-    case bs of
-        [] -> outputMessage te $ UnmatchedNoteOff key
-        ((_, act) : cs) -> do
-            modify (\s -> s { asOffActions = as ++ cs })
-            act te vel
+    mAct <- removeNoteOff ((== key) . fst)
+    case mAct of
+        Nothing -> outputMessage te $ UnmatchedNoteOff key
+        Just act -> act te vel
 
 dumpState :: Time -> AllocM ()
 dumpState te = gets asStrings >>= outputMessage te . Dump . showStates
@@ -133,7 +155,7 @@ allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
 
         Playing f0 tOn k -> case te - shifterTime f0 f1 of
             ts | tOn < ts -> (Steal (ts - tOn), do
-                    onNoteOff k $ noteOff ch tOn k ts
+                    onNoteOffStolen k ch $ noteOff ch tOn k ts
                     playNote ch ts f1
                     )
                | otherwise -> unavailable
@@ -151,7 +173,7 @@ allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
 
     unavailable = (Unavailable, do
                     outputMessage te $ Unplayable key
-                    onNoteOff key (\_ _ -> return ())
+                    onNoteOffMisc key (\_ _ -> return ())
                     )
 
     playNote ch ts f1 = do
@@ -159,7 +181,7 @@ allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
             outputEvent ts (NoteOn ch key 1)    -- the preposition message
         outputEvent te (NoteOn ch key vel)  -- the actual note on
         setPlayState ch (Playing f1 te key) -- note that string is now playing
-        onNoteOff key (\tOff vOff -> setPlayState ch (Played f1 te key tOff vOff))
+        onNoteOffPlaying key ch (\tOff vOff -> setPlayState ch (Played f1 te key tOff vOff))
 
     noteOff ch tOn k ts tOff vOff = do
         when (ts < tOff) $

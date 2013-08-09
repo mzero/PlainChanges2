@@ -94,5 +94,11 @@ debugBass prefix m = do
   where
     (msgs, mPost) = allocateBass m
 
+debugAllBass :: IO ()
+debugAllBass = do
+    debugBass "preamble" preamble
+    debugBass "partI" partI
+    debugBass "partII" partII
+    debugBass "partIII" partIII
 
 
