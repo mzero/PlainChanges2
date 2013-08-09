@@ -10,12 +10,13 @@ module MidiUtil
 
     , dumpMidi
 
-    , orderEvents
+    , messageOrder
     )
 where
 
 import Codec.Midi as M
 import Control.Monad.Trans.Writer (Writer, execWriter, tell)
+import Data.Bits ((.|.), (.&.), shiftL, shiftR)
 import Data.List (foldl', partition)
 import Text.Printf (printf)
 
@@ -121,7 +122,8 @@ dumpMidi midi = show (fileType midi) : show (timeDiv midi) : showTracks
         : map showEvent (toRealTime (timeDiv midi) $ toAbsTime tr)
     showEvent (te, ev) = printf "%10.3f " te ++ case ev of
         NoteOff ch k v          -> indent ch ++ "-" ++ key k ++ val v
-        NoteOn ch k v           -> indent ch ++ "⬥" ++ key k ++ val v
+        NoteOn ch k v  | v >  1 -> indent ch ++ "⬥" ++ key k ++ val v
+                    | otherwise -> indent ch ++ "⬦" ++ key k ++ val v
         KeyPressure ch k v      -> indent ch ++ "⬎" ++ key k ++ val v
         ControlChange ch n v    -> indent ch ++ "cc" ++ val n ++ val v
         ProgramChange ch n      -> indent ch ++ "#" ++ val n
@@ -133,12 +135,36 @@ dumpMidi midi = show (fileType midi) : show (timeDiv midi) : showTracks
     val = printf " %3d"
 
 
-orderEvents :: (Time, M.Message) -> (Time, M.Message) -> Ordering
-orderEvents (ta, _) (tb, _) | ta < tb = LT
-                            | ta > tb = GT
-orderEvents (_, ma) (_, mb) | not (M.isChannelMessage ma) = LT
-                            | not (M.isChannelMessage mb) = GT
-orderEvents (_, NoteOff _ _ _) _ = LT
-orderEvents _ (_, NoteOff _ _ _) = GT
-orderEvents _ _ = EQ
 
+messageOrder :: M.Message -> Int
+messageOrder m = case m of
+    NoteOff c k v         -> channelOrder 0x80 c k v
+    NoteOn c k v          -> channelOrder 0x90 c k v
+    KeyPressure  c k p    -> channelOrder 0xA0 c k p
+    ControlChange c n v   -> channelOrder 0xB0 c n v
+    ProgramChange c p     -> channelOrder 0x40 c p 0
+    ChannelPressure c p   -> channelOrder 0xD0 c p 0
+    PitchWheel c p        -> channelOrder 0xE0 c (p `shiftR` 8) (p .&. 255)
+    SequenceNumber _      -> metaOrder 0 0x00
+    Text _                -> metaOrder 3 0x01
+    Copyright _           -> metaOrder 3 0x02
+    TrackName _           -> metaOrder 3 0x03
+    InstrumentName _      -> metaOrder 3 0x04
+    Lyrics _              -> metaOrder 3 0x05
+    Marker _              -> metaOrder 2 0x06
+    CuePoint _            -> metaOrder 2 0x07
+    ChannelPrefix _       -> metaOrder 1 0x20
+    ProgramName _         -> metaOrder 3 0x08
+    DeviceName _          -> metaOrder 3 0x09
+    TrackEnd              -> metaOrder 9 0x2F
+    TempoChange _         -> metaOrder 2 0x51
+    SMPTEOffset _ _ _ _ _ -> metaOrder 2 0x54
+    TimeSignature _ _ _ _ -> metaOrder 2 0x58
+    KeySignature _ _      -> metaOrder 3 0x59
+    Reserved w _          -> metaOrder 4 w
+    Sysex s _             -> metaOrder 4 s
+  where
+    channelOrder t c a b = order4 5 (t .|. c) a b
+    metaOrder n x = order4 n x 0 0
+    order4 w x y z =
+        (w `shiftL` 24) .|. (x `shiftL` 16) .|. (y `shiftL` 8) .|. z

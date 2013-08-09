@@ -5,14 +5,15 @@ module MechBassAllocator
 where
 
 import Codec.Midi (Channel, Key, Message(..), Time, Track, Velocity)
+import Control.Monad (when)
 import Control.Monad.Trans.State.Strict
 import Data.Function (on)
-import Data.List (maximumBy, sortBy)
+import Data.List (intercalate, maximumBy, sortBy)
 import qualified Data.Map.Strict as Map
 import Text.Printf (printf)
 
 import MechBass
-import MidiUtil (orderEvents)
+import MidiUtil (messageOrder)
 
 
 data PlayState
@@ -74,6 +75,13 @@ onNoteOff key act = modify (\s -> s { asOffActions = Map.insert key act $ asOffA
 dropNoteOff :: Key -> AllocM ()
 dropNoteOff key = modify (\s -> s { asOffActions = Map.delete key $ asOffActions s })
 
+dumpState :: Time -> AllocM ()
+dumpState te = gets asStrings >>= outputEvent te . Text . showStates
+  where
+    showStates = intercalate " / " . map (showState . psState . snd) . Map.toAscList
+    showState Free = "Free"
+    showState (Playing f tOn k) = printf "Playing %d(%d) %.3f" k f tOn
+    showState (Played f tOn k tOff _) = printf "Played %d(%d) %.3f -> %.3f" k f tOn tOff
 
 data Allocation = Unavailable
                 | Steal Time        -- length of shortend, stolen note
@@ -88,7 +96,10 @@ allocator :: Track Time -> (AllocMessages, Track Time)
 allocator trk = postProcess $ execState (mapM_ go trk) initialAllocatorState
   where
     postProcess as = (reverse $ asMessages as, sortOnTime $ asEvents as)
-    sortOnTime = sortBy orderEvents
+    sortOnTime = map snd . sortBy (compare `on` fst) . map withOrder
+    withOrder ev@(te,msg) = ((te,messageOrder msg),ev)
+
+    go' ev@(te, _) = dumpState te >> go ev
 
     go (te, NoteOn _ key vel) = allocateNoteOn te key vel
 
@@ -104,7 +115,7 @@ allocator trk = postProcess $ execState (mapM_ go trk) initialAllocatorState
 allocateNoteOn :: Time -> Key -> Velocity -> AllocM ()
 allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
   where
-    findOptions = map optionKey . Map.toList
+    findOptions = map optionKey . Map.toAscList
     pickBest = snd . maximumBy (compare `on` fst)
 
 
@@ -116,31 +127,36 @@ allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
 
         Playing f0 tOn k -> case te - shifterTime f0 f1 of
             ts | tOn < ts -> (Steal (ts - tOn), do
-                    onNoteOff key $ truncatedNoteOff ch tOn k ts
+                    onNoteOff key $ noteOff ch tOn k ts
                     playNote ch ts f1
                     )
                | otherwise -> unavailable
 
         Played f0 tOn k tOff vOff -> case te - shifterTime f0 f1 of
             ts | tOff <= ts -> (Available, do
-                     outputEvent tOff (NoteOff ch k vOff)
-                     playNote ch ts f1
-                     )
+                    noteOff ch tOn k tOff tOff vOff
+                    playNote ch ts f1
+                    )
                | tOn <= ts -> (Steal (tOn - ts), do
-                    truncatedNoteOff ch tOn k ts tOff vOff
+                    noteOff ch tOn k ts tOff vOff
                     playNote ch ts f1
                     )
                | otherwise -> unavailable
 
-    unavailable = (Unavailable, outputMessage te $ Unplayable key)
+    unavailable = (Unavailable, do
+                    outputMessage te $ Unplayable key
+                    onNoteOff key (\_ _ -> return ())
+                    )
 
     playNote ch ts f1 = do
-        outputEvent ts (NoteOn ch key 1)    -- the preposition message
+        when (ts < te) $
+            outputEvent ts (NoteOn ch key 1)    -- the preposition message
         outputEvent te (NoteOn ch key vel)  -- the actual note on
         setPlayState ch (Playing f1 te key) -- note that string is now playing
         onNoteOff key (\tOff vOff -> setPlayState ch (Played f1 te key tOff vOff))
 
-    truncatedNoteOff ch tOn k ts tOff vOff = do
-        outputMessage ts $ StolenNote ch k (tOff - tOn) (ts - tOn)
+    noteOff ch tOn k ts tOff vOff = do
+        when (ts < tOff) $
+            outputMessage ts $ StolenNote ch k (tOff - tOn) (ts - tOn)
         outputEvent ts (NoteOff ch k vOff)
 
