@@ -18,23 +18,36 @@ import Text.Printf (printf)
 import MechBass
 import MidiUtil (messageOrder)
 
-
+-- | The state of string from the view point of the allocator.
+-- `Free` and `Playing` are straight forward. `Played` keeps track of the last
+-- not played, because the final NoteOff isn't output until the next note
+-- allocated to this string. This is because pre-positioning for the next note
+-- might require shortening the note.
 data PlayState
     = Free
     | Playing Fret Time Key
     | Played Fret Time Key Time Velocity
 
+-- | Information kept by the allocator per string.
 data PerString = Ps { psState :: PlayState
                     , psString :: BassString
                     }
 
+-- | What to do when we a NoteOff is processed
 type OffAction = Time -> Velocity -> AllocM ()
 
-data AllocState = As { asEvents :: Track Time
-                     , asStrings :: Map.Map Int PerString
-                     , asOffActions :: [((Key, Maybe Channel), OffAction)]
-                     , asMessages :: AllocMessages
-                     }
+-- \ The full state of the allocator.
+data AllocState =
+    As { asEvents :: Track Time
+            -- ^ the allocated events, unsorted
+       , asStrings :: Map.Map Int PerString
+            -- ^ state per string, indexed by channel 0..3
+       , asOffActions :: [((Key, Maybe Channel), OffAction)]
+            -- ^ how to handle a NoteOff, for playing notes the channel is
+            -- present, for stollen and dropped notes, it isn't
+       , asMessages :: AllocMessages
+            -- ^ allocation messages, in reverse order
+       }
 
 initialAllocatorState :: AllocState
 initialAllocatorState =
@@ -47,6 +60,7 @@ initialAllocatorState =
 data AllocMsg = Unplayable Key
               | UnmatchedNoteOff Key
               | StolenNote Channel Key Time Time
+                    -- ^ times are original note length, and shortened length
               | Dump String
     deriving (Eq)
 
@@ -59,6 +73,11 @@ instance Show AllocMsg where
 
 type AllocMessages = [(Time, AllocMsg)]
 
+
+{-
+    The allocation state monad, and utility functions for manipulating
+    the state safely.
+-}
 
 type AllocM = State AllocState
 
@@ -121,6 +140,11 @@ dumpState te = gets asStrings >>= outputMessage te . Dump . showStates
     showState (Playing f tOn k) = printf "Playing %d(%d) %.3f" k f tOn
     showState (Played f tOn k tOff _) = printf "Played %d(%d) %.3f -> %.3f" k f tOn tOff
 
+
+-- | A possible allocation decision. One of these is determined for each string
+-- for a given NoteOn. The best (maximum) is choosen. It is important, therefore
+-- that the Ord instance (derived) orders these decisions in least to most
+-- desirable order.
 data Allocation = Unavailable
                 | Steal Time        -- length of shortend, stolen note
                 | Available
@@ -129,7 +153,7 @@ data Allocation = Unavailable
 
 
 -- | Allocate notes to channels 0..3.
--- Assumes well formed note events, w/o prepositioning events.
+-- Assumes well-formed note events, w/o prepositioning events.
 allocator :: Track Time -> (AllocMessages, Track Time)
 allocator trk = postProcess $ execState run initialAllocatorState
   where
@@ -155,10 +179,11 @@ allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
     findOptions = map optionKey . Map.toAscList
     pickBest = snd . maximumBy (compare `on` fst)
 
-
+    optionKey :: (Channel, PerString) -> (Allocation, AllocM ())
     optionKey a@(_, ps) = maybe unavailable (optionFret a)
                             $ fretForKey (psString ps) key
 
+    optionFret :: (Channel, PerString) -> Fret -> (Allocation, AllocM ())
     optionFret (ch, ps) f1 = case psState ps of
         Free -> (Available, playNote ch (te - shifterMaxTime f1) f1)
 

@@ -14,8 +14,10 @@ import Data.Maybe (isJust, isNothing)
 
 import MidiUtil
 
+-- | Describes the range of a bass string, in MIDI note numbers.
 data BassString = BassString { stringLoKey, stringHiKey :: !Key }
 
+-- | The four strings of the MechBass.
 bassStrings :: [BassString] -- lowest pitch
 bassStrings = map (\lo -> BassString lo (lo + numFrets - 1)) notes
   where
@@ -25,16 +27,18 @@ bassStrings = map (\lo -> BassString lo (lo + numFrets - 1)) notes
 eString, aString, dString, gString :: BassString
 [eString, aString, dString, gString] = bassStrings
 
+-- | Fret positions, relative to the lowest note on a string.
+-- Zero is the lowest note on the string.
+type Fret = Int
 
-type Fret = Int             -- zero is lowest note on string
-
+-- | Return the fret position to play a note on a string, if possible.
 fretForKey :: BassString -> Key -> Maybe Fret
 fretForKey bs k = if stringLoKey bs <= k && k <= stringHiKey bs
                     then Just (k - stringLoKey bs)
                     else Nothing
 
 
--- | Columns are "from fret", rows are "to fret"
+-- | Columns are "from fret", rows are "to fret". Values in milliseconds.
 rawShifterTimesMs :: [[Double]]
 rawShifterTimesMs =
     [ [   0, 101, 156, 187, 215, 240, 265, 284, 301, 316, 332, 344, 357, 369 ]
@@ -53,36 +57,44 @@ rawShifterTimesMs =
     , [ 370, 345, 323, 296, 274, 253, 235, 214, 189, 165, 138, 104,  68,   0 ]
     ]
 
+-- | Times are in seconds. Added 15% on advice of MechBase creator.
 shifterTimes :: [[Time]]
 shifterTimes = map (map (* (0.001 * 1.15))) rawShifterTimesMs
 
--- | Time it takes to shift from one fret to another
-shifterTime :: Int -> Int -> Time
+-- | Time it takes to shift from one fret to another.
+shifterTime :: Fret -> Fret -> Time
 shifterTime startFret endFret = (shifterTimes !! endFret) !! startFret
 
--- | Maximum time it takes to shift to a fret
-shifterMaxTime :: Int -> Time
+-- | Maximum time it takes to shift to a fret.
+-- This is used when the current location of the shifter isn't known.
+shifterMaxTime :: Fret -> Time
 shifterMaxTime endFret = maximum (shifterTimes !! endFret)
 
 
-
+-- | A model of the MechBass state machine. This model includes the mechanics
+-- of shifting the fret, but ignores issues of positioning and spinning up the
+-- pick wheel, since those are fast enough to not matter.
 data StringState
-    = Unknown                   -- no sound, location of shifter unknown
+    = Unknown                   -- location of shifter unknown
     | Damped Fret               -- no sound, shifter at fret
     | Shifting Fret Time Bool   -- moving to fret, arrives at given time
                                 -- the bool indicates if pluck on arrival
     | Plucked Fret Time         -- sounding note, plucked at given time
   deriving (Eq, Show)
 
+-- | Is the string playing, and if so, on what fret. A string shifting, that
+-- will pluck on arrival is considered playing.
 playingFret :: StringState -> Maybe Fret
 playingFret (Shifting f _ True) = Just f
 playingFret (Plucked f _) = Just f
 playingFret _ = Nothing
 
+-- | Update the state for a point in time. This updates the result of shifting.
 updateState :: Time -> StringState -> StringState
 updateState te (Shifting f t p) | t <= te = if p then Plucked f t else Damped f
 updateState _ st = st
 
+-- | Respond to a MIDI event.
 stringEvent :: BassString -> Time -> M.Message -> StringState -> StringState
 stringEvent bs te ev s0 = case ev of
     M.NoteOn _ key vel | vel <= 1   -> preposition `onKey` key
@@ -128,6 +140,8 @@ Things to validate:
     3) note on, vel > 1, shifter finishes before end of note
     4) note on, vel 1, after note off
     5) first note assume maximal travel
+
+    Not all these are checked by the code below, yet.
 -}
 
 
@@ -157,18 +171,3 @@ validate bs = go Unknown
                 _ -> okay
             go stAfter es
     go _ [] = okay
-
-{-
-positioner:
-    1) compute time to shift from previous note
-    2) if positioner message after previous note off, output it
-    3) else if previous note off - shift time > reasonable note length
-        3a) shorten previous note
-        3b) output positiononer message
-    4) else if previous note off earlier, output positioner after that
-    5) else don't output positioner!
-
-    position at
-        thisStart - shiftTime
--}
-
