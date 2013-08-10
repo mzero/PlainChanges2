@@ -98,10 +98,10 @@ checkChannel ch chkr midi = execChecker $ chkr $ convert chTrack
     chTrack = fst $ partitionChannel ch $ tracks midi
     convert = toRealTime (timeDiv midi) . toAbsTime
 
-runCheckChannel :: (Show err) => M.Channel -> TrackChecker err -> M.Midi -> IO ()
+runCheckChannel :: (Show err) => M.Channel -> TrackChecker err -> M.Midi -> [String]
 runCheckChannel ch chkr midi = case checkChannel ch chkr midi of
-    Left errs -> mapM_ putStrLn $ showErrorMessages errs
-    Right () -> print "PASSED"
+    Left errs -> showErrorMessages errs
+    Right () -> ["PASSED"]
 
 showErrorMessages :: (Show err) => [(Time, err)] -> [String]
 showErrorMessages = map (\(t,e) -> printf "%8.3f %s" t $ show e)

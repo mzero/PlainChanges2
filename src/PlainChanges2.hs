@@ -44,68 +44,104 @@ plainChanges2_30 =
 -- Performance
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
-mainStagePatchMap :: UserPatchMap   -- N.B.: 0-based midi channels!
-mainStagePatchMap = [ (ElectricBassPicked, 4)
-                    , (Lead2Sawtooth, 5)
-                    , (TubularBells, 6)
-                    , (ChoirAahs, 7)
-                    , (Percussion, 9)
-                    ]
+-- | Maps parts, identified by instruments, to MIDI channels
+-- The bass part, as composed, is either on the strings indvidually, or on the
+-- whole bass part channel.
+patchMap :: UserPatchMap   -- N.B.: 0-based midi channels!
+patchMap = [ (SlapBass1, 0)             -- MechBass E string
+           , (SlapBass2, 1)             -- MechBass A string
+           , (SynthBass1, 2)            -- MechBass D string
+           , (SynthBass2, 3)            -- MechBass G string
+           , (ElectricBassPicked, 4)    -- whole bass part
+           , (Lead2Sawtooth, 5)         -- Coil
+           , (TubularBells, 6)          -- bells
+           , (ChoirAahs, 7)             -- voices
+           , (Percussion, 9)            -- drums
+           ]
 
-mainStageMidi :: Music Pitch -> Midi
-mainStageMidi m = toMidi (defToPerf m) mainStagePatchMap
+-- | Convert music to MIDI, as composed. Generally this form isn't playable
+-- directly, as the bass part is divided amongst five channels.
+composedMidi :: Music Pitch -> Midi
+composedMidi m = toMidi (defToPerf m) patchMap
 
-checkCoilTrack :: Music Pitch -> IO ()
-checkCoilTrack = runCheckChannel 5 Coil.validate . mainStageMidi
+-- | Convert music to MIDI for performance. This has all the bass parts prepared
+-- for the MechBass, with string allocations and pre-positioning events.
+performanceMidi :: Music Pitch -> Midi
+performanceMidi = preparePerformance . composedMidi
 
-playMainStage :: Music Pitch -> IO ()
-playMainStage m = do
+-- | Prepare MIDI for performance. Full bass part is allocated to strings, and
+-- all bass parts are adjusted with pre-positioning events.
+preparePerformance :: Midi -> Midi
+preparePerformance = snd . allocateBass
+
+-- | Prepare MIDI for preview on synths. Bass parts are combined back into a
+-- single track, and any pre-positioning evnets are removed.
+preparePreview :: Midi -> Midi
+preparePreview = processTracks (MechBass.recombine 4)
+
+
+-- | Play music as composed, on synthesizers
+playOnSynth :: Music Pitch -> IO ()
+playOnSynth = midiOnSynth . composedMidi
+
+-- | Play music as performed, on synthesizers
+performOnSynth :: Music Pitch -> IO ()
+performOnSynth = midiOnSynth . preparePerformance . composedMidi
+
+-- | Play MIDI on synthesizers. The MIDI is prepared for preview (bass on one
+-- channel). Plays on the first output port of the IAC Driver.
+midiOnSynth :: Midi -> IO ()
+midiOnSynth midi = do
     devs <- getAllDevices
     case findIacOutput devs of
-        ((iacOut,_):_) -> playMidi iacOut m'
+        ((iacOut,_):_) -> playMidi iacOut $ preparePreview midi
         [] -> putStrLn "*** No IAC Driver output found"
   where
     findIacOutput = filter (namedIAC . snd) .  filter (output . snd)
     namedIAC = ("IAC Driver" `isPrefixOf`) . name
-    m' = processTracks (MechBass.recombine 4) $ snd
-        $ processChannel MechBass.allocator 4 $ mainStageMidi m
 
-writeMidiFile :: FilePath -> Music Pitch -> IO ()
-writeMidiFile fp = exportFile fp . mainStageMidi
 
-allocateBass :: Music Pitch -> (MechBass.AllocMessages, Midi)
-allocateBass = processChannel MechBass.allocator 4 . mainStageMidi
 
-validateBassMidi :: Midi -> IO ()
-validateBassMidi m = do
-    putStrLn "== Validation =="
-    mapM_ run $ zip [0..] MechBass.bassStrings
+allocateBass :: Midi -> (MechBass.AllocMessages, Midi)
+allocateBass = processChannel MechBass.allocator 4
+
+validateCoil :: Midi -> [String]
+validateCoil m = "== Coil Validation ==" :
+    runCheckChannel 5 Coil.validate m
+
+validateBass :: Midi -> [String]
+validateBass m = "== Bass Validation ==" :
+    concat (zipWith run [0..] MechBass.bassStrings)
   where
-    run (ch, bs) = do
-        putStrLn $ "-- Channel " ++ show ch ++ " --"
+    run ch bs = ("-- Channel " ++ show ch ++ " --") :
         runCheckChannel ch (MechBass.validate bs) m
 
-debugBass :: String -> Music Pitch -> IO ()
-debugBass prefix m = do
-    writeFile ("dump/" ++ prefix ++ "-pretalloc.txt")
-        $ unlines $ dumpMidi $ mainStageMidi mShift
-    writeFile ("dump/" ++ prefix ++ "-postalloc.txt")
-        $ unlines $ dumpMidi $ mPost
-    writeFile ("dump/" ++ prefix ++ "-alloclog.txt")
-        $ unlines $ showErrorMessages msgs
-    writeFile ("dump/" ++ prefix ++ "-recombined.txt")
-        $ unlines $ dumpMidi $ mReco
-    validateBassMidi mPost
+prepareMidiFiles :: String -> Music Pitch -> IO ()
+prepareMidiFiles prefix m = do
+    writeMidiFile (prefix ++ "-composed") mComposed
+    writeMidiFile (prefix ++ "-performed") mPerformed
+    writeMidiFile (prefix ++ "-previewed") mPreviewed
+    writeFile (prefix ++ "-log.txt") $ unlines logLines
   where
-    mShift = rest hn :+: m
-    (msgs, mPost) = allocateBass mShift
-    mReco = processTracks (MechBass.recombine 4) mPost
+    mComposed = composedMidi $ rest hn :+: m
+    (msgs, mPerformed) = allocateBass mComposed
+    mPreviewed = preparePreview mPerformed
 
-debugAllBass :: IO ()
-debugAllBass = do
-    debugBass "preamble" preamble
-    debugBass "partI" partI
-    debugBass "partII" partII
-    debugBass "partIII" partIII
+    logLines = validateCoil mPerformed
+            ++ validateBass mPerformed
+            ++ "== Bass Allocation ==" : showErrorMessages msgs
+
+writeMidiFile :: String -> Midi -> IO ()
+writeMidiFile path midi = do
+    exportFile (path ++ ".midi") midi
+    writeFile (path ++ ".txt") $ unlines $ dumpMidi midi
+
+
+debugAllParts :: IO ()
+debugAllParts = do
+    prepareMidiFiles "dump/preamble" preamble
+    prepareMidiFiles "dump/partI" partI
+    prepareMidiFiles "dump/partII" partII
+    prepareMidiFiles "dump/partIII" partIII
 
 

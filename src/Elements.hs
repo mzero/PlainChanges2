@@ -44,3 +44,11 @@ onCoil  = instrument Lead2Sawtooth
 onDrums = instrument Percussion
 onVoice = instrument ChoirAahs
 
+-- | To assign parts to specitic strings of the MechBass, use these.
+-- They are a bit of a hack: Each is assigned a different instrument, which is
+-- later mapped to the specific channel for the bass string.
+onBassEString, onBassAString, onBassDString, onBassGString :: Music a -> Music a
+onBassEString = instrument SlapBass1
+onBassAString = instrument SlapBass2
+onBassDString = instrument SynthBass1
+onBassGString = instrument SynthBass2
