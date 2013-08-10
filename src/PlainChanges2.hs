@@ -103,7 +103,7 @@ midiOnSynth midi = do
 
 
 allocateBass :: Midi -> (MechBass.AllocMessages, Midi)
-allocateBass = processChannel MechBass.allocator 4
+allocateBass = processChannels MechBass.allocator (<= 4)
 
 validateCoil :: Midi -> [String]
 validateCoil m = "== Coil Validation ==" :

@@ -16,8 +16,13 @@ preamble :: Music Pitch
 preamble = onBass bassRingUp :=: preOnCoil coilRingUp
   where
     ringUp d p = line [ note (n*d) p | n <- [1..8]]
-    bassRingUp = chord $ zipWith bassRingOne [0..] [(E,3), (A,3), (D,4), (G,4)]
-    bassRingOne n p = delayM (fromIntegral n*(24*en-sn)) $ ringUp en p :+: timesM ((3-n)*3+3) (note wn p)
+    bassRingUp = chord $ zipWith3 bassRingOne
+        onBassStrings
+        [0..]
+        [(E,3), (A,3), (D,4), (G,4)]
+    bassRingOne onString n p =
+        onString $ delayM (fromIntegral n*(24*en-sn))
+            $ ringUp en p :+: timesM ((3-n)*3+3) (note wn p)
     preOnCoil = phrase [Art $ Staccato $ 1/2] . onCoil
     coilRingUp = chord
         [ ringTail  50 sn 0 (B,4)

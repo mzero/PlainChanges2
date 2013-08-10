@@ -6,7 +6,7 @@ module MidiUtil
 
     , TrackChecker
     , checkChannel, runCheckChannel
-    , processChannel
+    , processChannels
     , processTracks
 
     , showErrorMessages
@@ -39,38 +39,42 @@ okay :: Checker a
 okay = return ()
 
 
--- | Extract eveything for a single channel from a group of tracks into a single
--- track, and a collections of tracks of the remainder. Tracks which don't
--- contain the channel at all are included verbatim in the remainder. Tracks
--- which contain only the channel, are merged fully into the single track.
--- Tracks which mix the channel with others, are divided, with events for the
--- channel merged into the other channel's tracks, and the rest included in the
+-- | Extract eveything for a set of channels from a group of tracks into a
+-- single track, and a collections of tracks of the remainder.
+--
+-- The set of channels is determined by a predicate on the channel.
+--
+-- Tracks which don't contain the channel at all are included verbatim in the
+-- remainder. Tracks which contain only the channel, are merged fully into the
+-- single track. Tracks with both, are divided, with events for the channel set
+-- merged into the other channel's tracks, and the rest included in the
 -- remainder.
-partitionChannel :: (Num a, Ord a) => M.Channel -> [M.Track a] -> (M.Track a, [M.Track a])
-partitionChannel ch trks = (chTrk, noChTrks)
+partitionChannels :: (Num a, Ord a) =>
+    (M.Channel -> Bool) -> [M.Track a] -> (M.Track a, [M.Track a])
+partitionChannels chTest trks = (chTrk, noChTrks)
   where
-    (trks', noChTrks1) = partition (trackHasChannel ch) trks
-    (mixedTracks, chTrks1) = partition (trackHasOtherChannel ch) trks'
+    (trks', noChTrks1) = partition (trackHasChannel chTest) trks
+    (mixedTracks, chTrks1) = partition (trackHasOtherChannel chTest) trks'
     (chTrks2, noChTrks2) = unzip $ map splitter mixedTracks
     chTrk = foldl' M.merge [] $ chTrks1 ++ chTrks2
     noChTrks = noChTrks1 ++ noChTrks2
-    splitter = fromAbsTime2 . partition (messageOnChannel ch . snd) . toAbsTime
+    splitter = fromAbsTime2 . partition (messageOnChannel chTest . snd) . toAbsTime
     fromAbsTime2 (a, b) = (fromAbsTime a, fromAbsTime b)
 
 -- | Does a track have events on a given channel.
-trackHasChannel :: M.Channel -> M.Track a -> Bool
-trackHasChannel ch = not . null . filter (messageOnChannel ch . snd)
+trackHasChannel :: (M.Channel -> Bool) -> M.Track a -> Bool
+trackHasChannel chTest = not . null . filter (messageOnChannel chTest . snd)
 
 -- | Does a track have events on a channel other than the given channel.
 -- Note: This is not the opposite of `trackHasChannel`: Tracks may have events
 -- on multiple channels, or no channels at all.
-trackHasOtherChannel :: M.Channel -> M.Track a -> Bool
-trackHasOtherChannel ch =
-    not . null . filter (maybe False (/= ch) . messageChannel . snd)
+trackHasOtherChannel :: (M.Channel -> Bool) -> M.Track a -> Bool
+trackHasOtherChannel chTest =
+    not . null . filter (maybe False (not . chTest) . messageChannel . snd)
 
 -- | Is event on a given channel?
-messageOnChannel :: M.Channel -> M.Message -> Bool
-messageOnChannel ch = (== Just ch) . messageChannel
+messageOnChannel :: (M.Channel -> Bool) -> M.Message -> Bool
+messageOnChannel chTest = maybe False chTest . messageChannel
 
 -- | Return the channel of an event, if any.
 messageChannel :: M.Message -> Maybe M.Channel
@@ -79,14 +83,14 @@ messageChannel m = if M.isChannelMessage m then Just (M.channel m) else Nothing
 
 prop_partitionGetsAll :: [M.Track M.Ticks] -> Bool
 prop_partitionGetsAll =
-    not . trackHasChannel 0 . concat . snd . partitionChannel 0
+    not . trackHasChannel (== 0) . concat . snd . partitionChannels (== 0)
 
 prop_partitionHasOnly :: [M.Track M.Ticks] -> Bool
 prop_partitionHasOnly =
-    not . trackHasOtherChannel 0 . fst . partitionChannel 0
+    not . trackHasOtherChannel (== 0) . fst . partitionChannels (== 0)
 
 extractChannel :: M.Channel -> M.Midi -> M.Track M.Ticks
-extractChannel ch = fst . partitionChannel ch . tracks
+extractChannel ch = fst . partitionChannels (== ch) . tracks
 
 
 
@@ -95,7 +99,7 @@ type TrackChecker err = M.Track M.Time -> Checker err
 checkChannel :: M.Channel -> TrackChecker err -> M.Midi -> CheckResult err
 checkChannel ch chkr midi = execChecker $ chkr $ convert chTrack
   where
-    chTrack = fst $ partitionChannel ch $ tracks midi
+    chTrack = fst $ partitionChannels (== ch) $ tracks midi
     convert = toRealTime (timeDiv midi) . toAbsTime
 
 runCheckChannel :: (Show err) => M.Channel -> TrackChecker err -> M.Midi -> [String]
@@ -107,10 +111,11 @@ showErrorMessages :: (Show err) => [(Time, err)] -> [String]
 showErrorMessages = map (\(t,e) -> printf "%8.3f %s" t $ show e)
 
 
-processChannel :: (M.Track Time -> (a, M.Track Time)) -> M.Channel -> M.Midi -> (a, M.Midi)
-processChannel f ch midi = (a, midi')
+processChannels :: (M.Track Time -> (a, M.Track Time))
+                    -> (M.Channel -> Bool) -> M.Midi -> (a, M.Midi)
+processChannels f chTest midi = (a, midi')
   where
-    (chTrack, otherTracks) = partitionChannel ch $ tracks midi
+    (chTrack, otherTracks) = partitionChannels chTest $ tracks midi
     (a, chTrack') = f . toRealTime td . toAbsTime $ chTrack
     chTrack'' = fromAbsTime . fromRealTime td $ chTrack'
     midi' = midi { fileType = ft, tracks = chTrack'' : otherTracks }

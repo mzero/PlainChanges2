@@ -3,6 +3,8 @@ module Elements
     , tempoInterp
 
     , onBass, onBells, onCoil, onDrums, onVoice
+    , onBassStrings
+    , onBassEString, onBassAString, onBassDString, onBassGString
     )
 where
 
@@ -47,8 +49,9 @@ onVoice = instrument ChoirAahs
 -- | To assign parts to specitic strings of the MechBass, use these.
 -- They are a bit of a hack: Each is assigned a different instrument, which is
 -- later mapped to the specific channel for the bass string.
+onBassStrings :: [Music a -> Music a]
+onBassStrings = map instrument [SlapBass1, SlapBass2, SynthBass1, SynthBass2]
+
 onBassEString, onBassAString, onBassDString, onBassGString :: Music a -> Music a
-onBassEString = instrument SlapBass1
-onBassAString = instrument SlapBass2
-onBassDString = instrument SynthBass1
-onBassGString = instrument SynthBass2
+[onBassEString, onBassAString, onBassDString, onBassGString] = onBassStrings
+

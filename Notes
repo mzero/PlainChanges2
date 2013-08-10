@@ -34,11 +34,8 @@ data AllocState =
 
 
 
-[] partII with per string rings
-    [] allocator on only one string
-    [] run allocator over each ch individually
 [] remove text from track
-
+[] fix track ends
 
 Coil
     - range: upto 800Hz

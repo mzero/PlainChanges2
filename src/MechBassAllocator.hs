@@ -33,6 +33,12 @@ data PerString = Ps { psState :: PlayState
                     , psString :: BassString
                     }
 
+-- | Index into list of actions to perform on NoteOff.
+-- The Channel, Key tuple is the channel and key of the note from the source
+-- track. The Maybe Channel is the allocated channel that the note is playing
+-- on. It is Nothing for stolen and dropped notes.
+type OffIndex = ((Channel, Key), Maybe Channel)
+
 -- | What to do when we a NoteOff is processed
 type OffAction = Time -> Velocity -> AllocM ()
 
@@ -42,9 +48,8 @@ data AllocState =
             -- ^ the allocated events, unsorted
        , asStrings :: Map.Map Int PerString
             -- ^ state per string, indexed by channel 0..3
-       , asOffActions :: [((Key, Maybe Channel), OffAction)]
-            -- ^ how to handle a NoteOff, for playing notes the channel is
-            -- present, for stollen and dropped notes, it isn't
+       , asOffActions :: [(OffIndex, OffAction)]
+            -- ^ how to handle a NoteOff
        , asMessages :: AllocMessages
             -- ^ allocation messages, in reverse order
        }
@@ -97,10 +102,10 @@ modifyString ch f = modify (\s -> s { asStrings = Map.adjust f ch $ asStrings s 
 setPlayState :: Channel -> PlayState -> AllocM ()
 setPlayState ch ps = modifyString ch (\s -> s { psState = ps })
 
-addNoteOff :: (Key, Maybe Channel) -> OffAction -> AllocM ()
-addNoteOff kc act = modify (\s -> s { asOffActions = asOffActions s ++ [(kc, act)] })
+addNoteOff :: OffIndex -> OffAction -> AllocM ()
+addNoteOff i act = modify (\s -> s { asOffActions = asOffActions s ++ [(i, act)] })
 
-removeNoteOff :: ((Key, Maybe Channel) -> Bool) -> AllocM (Maybe OffAction)
+removeNoteOff :: (OffIndex -> Bool) -> AllocM (Maybe OffAction)
 removeNoteOff p = do
     es <- gets asOffActions
     let (as, bs) = break (p . fst) es
@@ -110,24 +115,24 @@ removeNoteOff p = do
             modify (\s -> s { asOffActions = as ++ cs })
             return $ Just act
 
-onNoteOffPlaying :: Key -> Channel -> OffAction -> AllocM ()
-onNoteOffPlaying k c = addNoteOff (k, Just c)
+onNoteOffPlaying :: Channel -> Key -> Channel -> OffAction -> AllocM ()
+onNoteOffPlaying ct k cp = addNoteOff ((ct, k), Just cp)
 
-onNoteOffStolen :: Key -> Channel -> OffAction -> AllocM ()
-onNoteOffStolen k c act = do
+onNoteOffStolen :: Channel -> Key -> Channel -> OffAction -> AllocM ()
+onNoteOffStolen ct k cp act = do
     es <- gets asOffActions
-    let (as, bs) = break ((== (k, Just c)) . fst) es
+    let (as, bs) = break ((== ((ct, k), Just cp)) . fst) es
     case bs of
         [] -> return ()
         (_ : cs) -> do
-            modify (\s -> s { asOffActions = as ++ ((k, Nothing), act) : cs })
+            modify (\s -> s { asOffActions = as ++ (((ct, k), Nothing), act) : cs })
 
-onNoteOffMisc :: Key -> OffAction -> AllocM ()
-onNoteOffMisc k = addNoteOff (k, Nothing)
+onNoteOffMisc :: Channel -> Key -> OffAction -> AllocM ()
+onNoteOffMisc ct k = addNoteOff ((ct, k), Nothing)
 
-handleNoteOff :: Time -> Key -> Velocity -> AllocM ()
-handleNoteOff te key vel = do
-    mAct <- removeNoteOff ((== key) . fst)
+handleNoteOff :: Time -> Channel -> Key -> Velocity -> AllocM ()
+handleNoteOff te ct key vel = do
+    mAct <- removeNoteOff ((== (ct, key)) . fst)
     case mAct of
         Nothing -> outputMessage te $ UnmatchedNoteOff key
         Just act -> act te vel
@@ -154,6 +159,8 @@ data Allocation = Unavailable
 
 -- | Allocate notes to channels 0..3.
 -- Assumes well-formed note events, w/o prepositioning events.
+-- Events on channels 0..3 will only be allocated on the respective strings.
+-- Other events will be allocated on any available string.
 allocator :: Track Time -> (AllocMessages, Track Time)
 allocator trk = postProcess $ execState run initialAllocatorState
   where
@@ -164,8 +171,8 @@ allocator trk = postProcess $ execState run initialAllocatorState
 
     go' ev@(te, _) = dumpState te >> go ev
 
-    go (te, NoteOn _ key vel)   = allocateNoteOn te key vel
-    go (te, NoteOff _ key vel)  = handleNoteOff te key vel
+    go (te, NoteOn ch key vel)  = allocateNoteOn te ch key vel
+    go (te, NoteOff ch key vel) = handleNoteOff te ch key vel
     go (te, ev)                 = outputEvent te ev
 
     flush = gets asStrings >>= mapM_ flushEvent . Map.toAscList
@@ -173,10 +180,14 @@ allocator trk = postProcess $ execState run initialAllocatorState
         outputEvent tOff (NoteOff ch key vOff)
     flushEvent _ = return ()
 
-allocateNoteOn :: Time -> Key -> Velocity -> AllocM ()
-allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
+allocateNoteOn :: Time -> Channel -> Key -> Velocity -> AllocM ()
+allocateNoteOn te chOrig key vel = do
+    strings <- gets asStrings
+    let opts = case Map.lookup chOrig strings of
+                    Just ps -> [(chOrig, ps)]
+                    Nothing -> Map.toAscList strings
+    pickBest $ map optionKey opts
   where
-    findOptions = map optionKey . Map.toAscList
     pickBest = snd . maximumBy (compare `on` fst)
 
     optionKey :: (Channel, PerString) -> (Allocation, AllocM ())
@@ -189,7 +200,7 @@ allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
 
         Playing f0 tOn k -> case te - shifterTime f0 f1 of
             ts | tOn < ts -> (Steal (ts - tOn), do
-                    onNoteOffStolen k ch $ noteOff ch tOn k ts
+                    onNoteOffStolen chOrig k ch $ noteOff ch tOn k ts
                     playNote ch ts f1
                     )
                | otherwise -> unavailable
@@ -207,7 +218,7 @@ allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
 
     unavailable = (Unavailable, do
                     outputMessage te $ Unplayable key
-                    onNoteOffMisc key (\_ _ -> return ())
+                    onNoteOffMisc chOrig key (\_ _ -> return ())
                     )
 
     playNote ch ts f1 = do
@@ -215,7 +226,8 @@ allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
             outputEvent ts (NoteOn ch key 1)    -- the preposition message
         outputEvent te (NoteOn ch key vel)  -- the actual note on
         setPlayState ch (Playing f1 te key) -- note that string is now playing
-        onNoteOffPlaying key ch (\tOff vOff -> setPlayState ch (Played f1 te key tOff vOff))
+        onNoteOffPlaying chOrig key ch
+            (\tOff vOff -> setPlayState ch (Played f1 te key tOff vOff))
 
     noteOff ch tOn k ts tOff vOff = do
         when (ts < tOff) $
