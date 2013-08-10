@@ -31,7 +31,8 @@ TODO:
 
 plainChanges2_30 :: Music Pitch
 plainChanges2_30 =
-    preamble
+    rest wn
+    :+: preamble
     :+: rest (2*wn)
     :+: partI
     :+: rest (wn)
