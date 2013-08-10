@@ -7,6 +7,7 @@ module MidiUtil
     , TrackChecker
     , checkChannel, runCheckChannel
     , processChannel
+    , processTracks
 
     , showErrorMessages
     , dumpMidi
@@ -116,6 +117,12 @@ processChannel f ch midi = (a, midi')
     ft = if null otherTracks then SingleTrack else MultiTrack
     td = timeDiv midi
 
+processTracks :: (M.Track Time -> M.Track Time) -> M.Midi -> M.Midi
+processTracks f midi = midi { tracks = map (t' . f . t) $ tracks midi }
+  where
+    t = toRealTime td . toAbsTime
+    t' = fromAbsTime . fromRealTime td
+    td = timeDiv midi
 
 dumpMidi :: M.Midi -> [String]
 dumpMidi midi = show (fileType midi) : show (timeDiv midi) : showTracks

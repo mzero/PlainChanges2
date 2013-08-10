@@ -61,11 +61,13 @@ playMainStage :: Music Pitch -> IO ()
 playMainStage m = do
     devs <- getAllDevices
     case findIacOutput devs of
-        ((iacOut,_):_) -> playMidi iacOut $ mainStageMidi m
+        ((iacOut,_):_) -> playMidi iacOut m'
         [] -> putStrLn "*** No IAC Driver output found"
   where
     findIacOutput = filter (namedIAC . snd) .  filter (output . snd)
     namedIAC = ("IAC Driver" `isPrefixOf`) . name
+    m' = processTracks (MechBass.recombine 4) $ snd
+        $ processChannel MechBass.allocator 4 $ mainStageMidi m
 
 writeMidiFile :: FilePath -> Music Pitch -> IO ()
 writeMidiFile fp = exportFile fp . mainStageMidi
@@ -85,14 +87,18 @@ validateBassMidi m = do
 debugBass :: String -> Music Pitch -> IO ()
 debugBass prefix m = do
     writeFile ("dump/" ++ prefix ++ "-pretalloc.txt")
-        $ unlines $ dumpMidi $ mainStageMidi m
+        $ unlines $ dumpMidi $ mainStageMidi mShift
     writeFile ("dump/" ++ prefix ++ "-postalloc.txt")
         $ unlines $ dumpMidi $ mPost
     writeFile ("dump/" ++ prefix ++ "-alloclog.txt")
         $ unlines $ showErrorMessages msgs
+    writeFile ("dump/" ++ prefix ++ "-recombined.txt")
+        $ unlines $ dumpMidi $ mReco
     validateBassMidi mPost
   where
-    (msgs, mPost) = allocateBass m
+    mShift = rest hn :+: m
+    (msgs, mPost) = allocateBass mShift
+    mReco = processTracks (MechBass.recombine 4) mPost
 
 debugAllBass :: IO ()
 debugAllBass = do

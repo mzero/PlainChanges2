@@ -1,14 +1,17 @@
 module MechBassAllocator
     ( AllocMessages
     , allocator
-   )
+    , recombine
+    )
 where
 
-import Codec.Midi (Channel, Key, Message(..), Time, Track, Velocity)
+import Codec.Midi (Channel, Key, Message(..), Time, Track, Velocity,
+    isChannelMessage)
 import Control.Monad (when)
 import Control.Monad.Trans.State.Strict
 import Data.Function (on)
 import Data.List (intercalate, maximumBy, sortBy)
+import Data.Maybe (mapMaybe)
 import qualified Data.Map.Strict as Map
 import Text.Printf (printf)
 
@@ -194,3 +197,16 @@ allocateNoteOn te key vel = gets asStrings >>= pickBest . findOptions
             outputMessage ts $ StolenNote ch k (tOff - tOn) (ts - tOn)
         outputEvent ts (NoteOff ch k vOff)
 
+-- | Recombine allocated notes back onto one channel.
+-- Prepositioning events (NoteOn w/ velocity 1) are stripped.
+recombine :: Channel -> Track Time -> Track Time
+recombine rch = mapMaybe adjust
+  where
+    adjust e@(t, NoteOn ch k v)
+        | not (ch < 4)  = Just e
+        | v <= 1        = Nothing
+        | otherwise     = Just (t, NoteOn rch k v)
+    adjust e@(t, msg)
+        | isChannelMessage msg && channel msg < 4
+                        = Just (t, msg { channel = rch })
+        | otherwise     = Just e
