@@ -48,10 +48,10 @@ plainChanges2_30 =
 -- The bass part, as composed, is either on the strings indvidually, or on the
 -- whole bass part channel.
 patchMap :: UserPatchMap   -- N.B.: 0-based midi channels!
-patchMap = [ (SlapBass1, 0)             -- MechBass E string
-           , (SlapBass2, 1)             -- MechBass A string
-           , (SynthBass1, 2)            -- MechBass D string
-           , (SynthBass2, 3)            -- MechBass G string
+patchMap = [ (SynthBass2, 0)            -- MechBass G string
+           , (SynthBass1, 1)            -- MechBass D string
+           , (SlapBass2, 2)             -- MechBass A string
+           , (SlapBass1, 3)             -- MechBass E string
            , (ElectricBassPicked, 4)    -- whole bass part
            , (Lead2Sawtooth, 5)         -- Coil
            , (TubularBells, 6)          -- bells
@@ -111,7 +111,7 @@ validateCoil m = "== Coil Validation ==" :
 
 validateBass :: Midi -> [String]
 validateBass m = "== Bass Validation ==" :
-    concat (zipWith run [0..] MechBass.bassStrings)
+    concat (zipWith run MechBass.bassChannels MechBass.bassStrings)
   where
     run ch bs = ("-- Channel " ++ show ch ++ " --") :
         runCheckChannel ch (MechBass.validate bs) m

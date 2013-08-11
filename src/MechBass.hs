@@ -1,6 +1,7 @@
 module MechBass
     ( BassString()
     , bassStrings
+    , bassChannels
     , Fret
     , fretForKey
     , shifterTime, shifterMaxTime
@@ -26,6 +27,9 @@ bassStrings = map (\lo -> BassString lo (lo + numFrets - 1)) notes
 
 eString, aString, dString, gString :: BassString
 [eString, aString, dString, gString] = bassStrings
+
+bassChannels :: [M.Channel]
+bassChannels = [3, 2, 1, 0]
 
 -- | Fret positions, relative to the lowest note on a string.
 -- Zero is the lowest note on the string.

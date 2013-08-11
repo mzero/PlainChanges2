@@ -57,7 +57,7 @@ data AllocState =
 initialAllocatorState :: AllocState
 initialAllocatorState =
     As { asEvents = []
-       , asStrings = Map.fromList $ zip [0..] $ map (Ps Free) bassStrings
+       , asStrings = Map.fromList $ zip bassChannels $ map (Ps Free) bassStrings
        , asOffActions = []
        , asMessages = []
        }
