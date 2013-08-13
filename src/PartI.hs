@@ -56,7 +56,20 @@ p1Ostinado = onBass $ line $ concat
         , [(G,4), (D,4), (B, 3), (E, 3)]
         ]
 
+phrase2, phrase3, phrase4 :: Dur
+phrase2 = 5 * qn
+phrase3 = 7 * en
+phrase4 = 9 * en
 
+dur2s, dur3s, dur4s :: Dur
+dur2s = 10 * qn
+dur3s = 27 * en
+dur4s = 115 * en
+
+start2s, start3s, start4s :: Dur
+start2s = 0
+start3s = start2s + 4 * dur2s
+start4s = start3s + 4 * dur3s
 
 p1coilA :: Music Pitch
 p1coilA = delayM (30*qn) $
@@ -80,11 +93,58 @@ p1coilC = delayM (40*qn+108*en+27*en) $ chord $
         ]
 
 
+startSectD :: Dur
+startSectD = start4s + dur4s + 3 * phrase4
+    -- start 3 phrases into the second ring of 4
+
+sectionD :: Music Pitch
+sectionD = delayM startSectD $
+    onDrums percD
+    :=: onCoil12 coilD
+    :=: onCoil78 coilD'
+  where
+    percD = timesM 8 $ ringPerc en [AcousticSnare, AcousticSnare]
+    coilD = delayM (20*en) $ line $ map (ringNotes en) pairs
+    pairs = [ [(Fs,6), (B,5)]
+            , [(B,5), (G, 5)]
+            , [(G,5), (D, 5)]
+            , [(Fs,6), (G, 5)]
+            , [(B,5), (D, 5)]
+            , [(Fs,6), (D, 5)]
+            ]
+    coilD' = delayM (20*en) $ chord $ zipWith riff [0..]
+        [ [(G,4), (D,4)]
+        , [(Fs,5), (G,4)]
+        , [(B,5), (D,4)]
+        ]
+    riff n ps = delayM (n*10*en) $ ringNotes hn ps
+
+startSectE :: Dur
+startSectE = start4s + 2 * dur4s + 2 * phrase4
+
+sectionE :: Music Pitch
+sectionE = delayM startSectE $
+    onDrums percE
+    :=: onCoil78 coilE
+  where
+    percE = ringPerc q [AcousticSnare, AcousticSnare, BassDrum1]
+        :+: ringPerc q [AcousticSnare, AcousticSnare, BassDrum1]
+    coilE = chord $ zipWith riff [0..]
+                [ [(Fs,6), (B,5), (G, 5)]
+                , [(D,6), (A, 5), (Fs, 5)]
+                , [(G,6), (D,6), (B, 5)]
+                , [(G,5), (E,5), (C, 5)]
+                , [(Fs,5), (B,4), (G, 4)]
+                , [(D,5), (A, 4), (Fs, 4)]
+                ]
+    riff n ps = delayM (n * 15 * q) $ ringNotes q ps
+    q = dsn
+
 p1coil :: Music Pitch
 p1coil = onCoil78 $ p1coilA :=: p1coilB :=: p1coilC
 
 partITempo :: Music Pitch -> Music Pitch
-partITempo = tempoInterp (125/120) (140/120)
+partITempo = tempoInterp (125/120) (130/120)
 
 partI :: Music Pitch
-partI = partITempo $ p1Ostinado :=: p1coil
+partI = partITempo $ p1Ostinado :=: p1coil :=: sectionD :=: sectionE
