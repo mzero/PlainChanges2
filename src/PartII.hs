@@ -28,11 +28,8 @@ p2Ostinado =
   where
     riff a b c ps = delayM (a*9*qn + b*qn + c*sn) $ ringNotes qn ps
 
-p2OnCoil :: Music Pitch -> Music Pitch
-p2OnCoil = onCoil . phrase [Art $ Staccato $ 1/4]
-
 p2coil :: Music Pitch
-p2coil = p2OnCoil
+p2coil = onCoil14
     $   riff  2 [(Af, 5), (F,  5), (C, 5)]
     :=: riff  3 [(C,  6), (Af, 5), (E, 5)]
     :=: riff  7 [(Ef, 6), (C, 6), (G, 5)]
@@ -40,7 +37,7 @@ p2coil = p2OnCoil
     riff a ps = delayM (a*9*qn) $ ringNotes (sn/2) ps
 
 p2coilAccentB3 :: Music Pitch
-p2coilAccentB3 = p2OnCoil $ delayM (8*9*qn)
+p2coilAccentB3 = onCoil14 $ delayM (8*9*qn)
     $ chord (map acc [4, 6, 10, 11, 12])
   where
     acc n = delayM (fromIntegral n*9*qn) $ chord $

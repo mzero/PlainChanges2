@@ -31,11 +31,8 @@ p3r4dur = dur p3r4
 p3OstinadoPhraseDur :: Dur
 p3OstinadoPhraseDur = 11 * qn
 
-p3OnCoil :: Music Pitch -> Music Pitch
-p3OnCoil = phrase [Art $ Staccato $ 15/16] . onCoil
-
 p3SetA :: Music Pitch
-p3SetA = p3OnCoil $ chord
+p3SetA = onCoil1516 $ chord
     [ timesM 10 $ p3r2
     , delayM (2 * p3r2dur) $ timesM 2 p3r3
     , delayM (2 * p3r2dur + p3r3dur) p3r4
@@ -44,13 +41,13 @@ p3SetA = p3OnCoil $ chord
 p3SetB :: Music Pitch
 p3SetB = onBells (p3r2 :+: rest p3r2dur :+: p3r2' :+: rest p3r2dur :+: p3r2) :+: chord
     [ onBells $ p3r3 :+: p3r3 :+: p3r4
-    , p3OnCoil p3r4
+    , onCoil1516 p3r4
     ]
 
 p3SetC :: Music Pitch
 p3SetC = chord
     [ onBells $ timesM 8 final
-    , p3OnCoil $ chord $ zipWith cCycle [5,3,1] [0,12,24]
+    , onCoil1516 $ chord $ zipWith cCycle [5,3,1] [0,12,24]
     ]
   where
     final = line $ map (note qn) [(Bf, 4), (F, 4), (D, 4), (C, 4), (Bf, 3)]

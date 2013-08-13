@@ -13,7 +13,7 @@ gMajorScale = [G, A, B, C, D, E, Fs]
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
 preamble :: Music Pitch
-preamble = onBass bassRingUp :=: preOnCoil coilRingUp
+preamble = onBass bassRingUp :=: onCoil12 coilRingUp
   where
     ringUp d p = line [ note (n*d) p | n <- [1..8]]
     bassRingUp = chord $ zipWith3 bassRingOne
@@ -23,7 +23,6 @@ preamble = onBass bassRingUp :=: preOnCoil coilRingUp
     bassRingOne onString n p =
         onString $ delayM (fromIntegral n*(24*en-sn))
             $ ringUp en p :+: timesM ((3-n)*3+3) (note wn p)
-    preOnCoil = phrase [Art $ Staccato $ 1/2] . onCoil
     coilRingUp = chord
         [ ringTail  50 sn 0 (B,4)
         , ringTail  72 sn 0 (Fs,5)
@@ -58,8 +57,6 @@ p1Ostinado = onBass $ line $ concat
         ]
 
 
-p1OnCoil :: Music Pitch -> Music Pitch
-p1OnCoil = phrase [Art $ Staccato $ 7/8] . onCoil
 
 p1coilA :: Music Pitch
 p1coilA = delayM (30*qn) $
@@ -73,8 +70,18 @@ p1coilB = delayM (40*qn+27*en+14*en) $ chord $
         , [(D,6), (B, 5), (E, 5)]
         ]
 
+p1coilC :: Music Pitch
+p1coilC = delayM (40*qn+108*en+27*en) $ chord $
+    zipWith (\n ps -> delayM (n*19*sn) $ ringNotes sn ps) [0..]
+        [ [(G,6), (E,6), (C, 6), (G, 5)]
+        , [(Fs,6), (B,5), (G, 5), (D, 5)]
+        , [(D,6), (A, 5), (Fs, 5), (B, 4)]
+        , [(G,6), (D,6), (B, 5), (E, 5)]
+        ]
+
+
 p1coil :: Music Pitch
-p1coil = p1OnCoil $ p1coilA :=: p1coilB
+p1coil = onCoil78 $ p1coilA :=: p1coilB :=: p1coilC
 
 partITempo :: Music Pitch -> Music Pitch
 partITempo = tempoInterp (125/120) (140/120)
