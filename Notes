@@ -15,22 +15,6 @@ MechBass
         E - (E,2) ~ (F, 3)
 
 
-Nothing
-NoteOn, awating NoteOff
-NoteOn, turned off, swallow NoteOff
-NoteOn, NoteOff seen
-
-data AllocState =
-    AlFree                  -- nothing every played
-    | AlPlaying Time        -- note on seen at time
-    | AlPlayed Time Time    -- note on and off seen
-
-(te, M.NoteOn _ key vel) -> case as of
-  Free -> Available (outputMsgs)
-  Playing k tn | tn < ts -> Steal (ts - tn) (outputMsgs, add swallow noteOff k)
-  Played k v tn to | to <= ts -> Available (outputNoteOff to k v : outputMsgs)
-                     | tn < ts ->  Steal (ts - tn) (outputMsgs, add swallow noteOff k)
-  _ ->Unavailable
 
 
 
@@ -42,16 +26,34 @@ Coil
         (G,6) - MIDI 79 - 784Hz
 
 
-Ideas for part I
-    - play bass in 5ths/4ths on bass
-    - play bass in unison on coil
-    - play bass in 5ths/4ths on bass, staggered
 
-    - double speed r3 on coil
-    -
+Preamble
+  - longer last note? longer extra note?
 
+Part I
+  - play bass in unison on coil
+  - play bass in 5ths/4ths on bass, staggered
 
+  - repeat of staggered coil? faster?
+  - decending ladder of r2 on coil?
+  - r3 of percussion
+  - r3 of just snare?
+  - a different arrangement for each r4 segment?
 
+Part II
+  - inter-woven staccato r3 on coil?
+  - counting / singing of sequences of the r4?
+  - counting whole r3?
+
+Part III
+  - shift whole thing down so coil can be shifted up?
+  - short coil and percussion r2 & r3s during bell r4
+
+Misc
+  - timing of inter-part rests
+  - unplayable notes
+    - on coil on part III
+    - on bass throughout
 
 
 Durations
