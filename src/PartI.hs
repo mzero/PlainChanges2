@@ -141,6 +141,27 @@ sectionE = delayM startSectE $
     riff n ps = delayM (n * 15 * q) $ ringNotes q ps
     q = dsn
 
+startSectF :: Dur
+startSectF = start4s + 3 * dur4s + 2 * phrase4
+
+sectionF :: Music Pitch
+sectionF = delayM startSectF $
+    onCoil78 coilF
+    :=: onDrums percF
+  where
+    coilF = chord $ zipWith (\n ps -> delayM (n*37*sn) $ ringNotes sn ps) [0..]
+        [ [(G,6), (E,6), (C, 6), (G, 5)]
+        , [(Fs,6), (B,5), (G, 5), (D, 5)]
+        , [(D,6), (A, 5), (Fs, 5), (B, 4)]
+        , [(G,6), (D,6), (B, 5), (E, 5)]
+        , [(G,5), (E,5), (C, 5), (G, 4)]
+        , [(Fs,5), (B,4), (G, 4), (D, 4)]
+        , [(D,5), (A, 4), (Fs, 4), (B, 3)]
+        , [(G,5), (D,5), (B, 4), (E, 4)]
+        ]
+    percF = timesM 3 $
+        rest hn :+: ringPerc sn [AcousticSnare, AcousticSnare, AcousticSnare, BassDrum1]
+
 p1coil :: Music Pitch
 p1coil = onCoil78 $ p1coilA :=: p1coilB :=: p1coilC
 
@@ -148,4 +169,4 @@ partITempo :: Music Pitch -> Music Pitch
 partITempo = tempoInterp (125/120) (130/120)
 
 partI :: Music Pitch
-partI = partITempo $ p1Ostinado :=: p1coil :=: sectionD :=: sectionE
+partI = partITempo $ p1Ostinado :=: p1coil :=: sectionD :=: sectionE :=: sectionF
