@@ -222,8 +222,9 @@ allocateNoteOn te chOrig key vel = do
                     )
 
     playNote ch ts f1 = do
-        when (ts < te) $
+        when (ts < te) $ do
             outputEvent ts (NoteOn ch key 1)    -- the preposition message
+            outputEvent te (NoteOff ch key 1)
         outputEvent te (NoteOn ch key vel)  -- the actual note on
         setPlayState ch (Playing f1 te key) -- note that string is now playing
         onNoteOffPlaying chOrig key ch
@@ -243,6 +244,10 @@ recombine rch = mapMaybe adjust
         | not (ch < 4)  = Just e
         | v <= 1        = Nothing
         | otherwise     = Just (t, NoteOn rch k v)
+    adjust e@(t, NoteOff ch k v)
+        | not (ch < 4)  = Just e
+        | v <= 1        = Nothing
+        | otherwise     = Just (t, NoteOff rch k v)
     adjust e@(t, msg)
         | isChannelMessage msg && channel msg < 4
                         = Just (t, msg { channel = rch })

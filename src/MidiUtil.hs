@@ -137,8 +137,9 @@ dumpMidi midi = show (fileType midi) : show (timeDiv midi) : showTracks
         (printf "==Track %2d" n ++ concatMap (printf ":ch%2d") [0..15::Int])
         : map showEvent (toRealTime (timeDiv midi) $ toAbsTime tr)
     showEvent (te, ev) = printf "%10.3f " te ++ case ev of
-        NoteOff ch k v          -> indent ch ++ "-" ++ key k ++ val v
-        NoteOn ch k v  | v >  1 -> indent ch ++ "⬥" ++ key k ++ val v
+        NoteOff ch k v | v > 1  -> indent ch ++ "-" ++ key k ++ val v
+                    | otherwise -> indent ch ++ "." ++ key k ++ val v
+        NoteOn ch k v  | v > 1  -> indent ch ++ "⬥" ++ key k ++ val v
                     | otherwise -> indent ch ++ "⬦" ++ key k ++ val v
         KeyPressure ch k v      -> indent ch ++ "⬎" ++ key k ++ val v
         ControlChange ch n v    -> indent ch ++ "cc" ++ val n ++ val v

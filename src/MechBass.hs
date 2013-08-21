@@ -103,7 +103,7 @@ stringEvent :: BassString -> Time -> M.Message -> StringState -> StringState
 stringEvent bs te ev s0 = case ev of
     M.NoteOn _ key vel | vel <= 1   -> preposition `onKey` key
                        | otherwise  -> startNote `onKey` key
-    M.NoteOff _ key _               -> stopNote `onKey` key
+    M.NoteOff _ key vel | vel > 1   -> stopNote `onKey` key
     _ -> st
   where
     st = updateState te s0
@@ -169,7 +169,7 @@ validate bs = go Unknown
                 M.NoteOn _ key _ -> do
                     check te (isJust $ fretForKey bs key) $ KeyOutOfRange key
                     check te (isNothing pFret) $ NotMonophonic
-                M.NoteOff _ key _ -> do
+                M.NoteOff _ key vel | vel > 1 -> do
                     check te (isJust $ fretForKey bs key) $ KeyOutOfRange key
                     check te (pFret == fretForKey bs key) $ BadNoteOff
                 _ -> okay
