@@ -14,16 +14,12 @@ MechBass
         A - (A,2) ~ (As, 3)
         E - (E,2) ~ (F, 3)
 
-
-
-
-
-[] remove text from track
-[] fix track ends
-
 Coil
     - range: upto 800Hz
         (G,6) - MIDI 79 - 784Hz
+
+[] set bass volume to 95
+    [] run a test with a ring at each of several volumes
 
 
 

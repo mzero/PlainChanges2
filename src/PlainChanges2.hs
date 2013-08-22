@@ -124,8 +124,9 @@ prepareMidiFiles prefix m = do
     writeFile (prefix ++ "-log.txt") $ unlines logLines
   where
     mComposed = composedMidi $ rest hn :+: m
-    (msgs, mPerformed) = allocateBass mComposed
-    mPreviewed = preparePreview mPerformed
+    (msgs, mAllocated) = allocateBass mComposed
+    mPreviewed = preparePreview mAllocated
+    mPerformed = filterMessages (not . isProgramChange) mAllocated
 
     logLines = validateCoil mPerformed
             ++ validateBass mPerformed
@@ -133,8 +134,10 @@ prepareMidiFiles prefix m = do
 
 writeMidiFile :: String -> Midi -> IO ()
 writeMidiFile path midi = do
-    exportFile (path ++ ".midi") midi
-    writeFile (path ++ ".txt") $ unlines $ dumpMidi midi
+    exportFile (path ++ ".midi") midi'
+    writeFile (path ++ ".txt") $ unlines $ dumpMidi midi'
+  where
+    midi' = prepTrackEnds midi
 
 
 debugAllParts :: IO ()

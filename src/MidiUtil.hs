@@ -8,6 +8,8 @@ module MidiUtil
     , checkChannel, runCheckChannel
     , processChannels
     , processTracks
+    , prepTrackEnds
+    , filterMessages
 
     , showErrorMessages
     , dumpMidi
@@ -128,6 +130,14 @@ processTracks f midi = midi { tracks = map (t' . f . t) $ tracks midi }
     t = toRealTime td . toAbsTime
     t' = fromAbsTime . fromRealTime td
     td = timeDiv midi
+
+prepTrackEnds :: M.Midi -> M.Midi
+prepTrackEnds midi = midi { tracks = map prep $ tracks midi }
+  where
+    prep = (++ [(0, TrackEnd)]) . removeTrackEnds
+
+filterMessages :: (M.Message -> Bool) -> M.Midi -> M.Midi
+filterMessages p midi = midi { tracks = map (filter (p . snd)) $ tracks midi }
 
 dumpMidi :: M.Midi -> [String]
 dumpMidi midi = show (fileType midi) : show (timeDiv midi) : showTracks
