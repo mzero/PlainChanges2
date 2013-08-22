@@ -41,7 +41,7 @@ tempoInterp start end = phrase [Tmp $ Accelerando accl] . tempo start
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
 onBass, onBells, onCoil, onDrums, onVoice :: Music a -> Music a
-onBass  = instrument ElectricBassPicked
+onBass  = instrument ElectricBassPicked . bassVolume
 onBells = instrument TubularBells
 onCoil  = instrument Lead2Sawtooth
 onDrums = instrument Percussion
@@ -51,10 +51,14 @@ onVoice = instrument ChoirAahs
 -- They are a bit of a hack: Each is assigned a different instrument, which is
 -- later mapped to the specific channel for the bass string.
 onBassStrings :: [Music a -> Music a]
-onBassStrings = map instrument [SlapBass1, SlapBass2, SynthBass1, SynthBass2]
+onBassStrings = map (\i -> instrument i . bassVolume)
+    [SlapBass1, SlapBass2, SynthBass1, SynthBass2]
 
 onBassEString, onBassAString, onBassDString, onBassGString :: Music a -> Music a
 [onBassEString, onBassAString, onBassDString, onBassGString] = onBassStrings
+
+bassVolume :: Music a -> Music a
+bassVolume = phrase [Dyn $ Loudness 95]
 
 onCoilArt :: Rational -> Music a -> Music a
 onCoilArt r = onCoil . phrase [Art $ Staccato r]
