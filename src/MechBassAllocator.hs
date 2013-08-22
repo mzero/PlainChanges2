@@ -164,7 +164,8 @@ data Allocation = Unavailable
 allocator :: Track Time -> (AllocMessages, Track Time)
 allocator trk = postProcess $ execState run initialAllocatorState
   where
-    run = mapM_ go trk >> flush
+    run = mapM_ go preProcess >> flush
+    preProcess = sortOnTime trk
     postProcess as = (reverse $ asMessages as, sortOnTime $ asEvents as)
     sortOnTime = map snd . sortBy (compare `on` fst) . map withOrder
     withOrder ev@(te,msg) = ((te,messageOrder msg),ev)
