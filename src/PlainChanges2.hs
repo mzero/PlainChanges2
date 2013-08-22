@@ -12,6 +12,7 @@ import MidiUtil
 import PartI
 import PartII
 import PartIII
+import VolumeTest
 
 {-
 TODO:
@@ -146,5 +147,6 @@ debugAllParts = do
     prepareMidiFiles "dump/partI" partI
     prepareMidiFiles "dump/partII" partII
     prepareMidiFiles "dump/partIII" partIII
+    prepareMidiFiles "dump/volume-test" volumeTest
 
 
