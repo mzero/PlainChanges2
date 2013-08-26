@@ -48,6 +48,8 @@ p3SetC :: Music Pitch
 p3SetC = chord
     [ onBells $ timesM 8 final
     , onCoil1516 $ chord $ zipWith cCycle [5,3,1] [0,12,24]
+        -- N.B.: The high (Bf,6) of the very last cycle is too high for the
+        -- coil - it just gets dropped... oh well!
     ]
   where
     final = line $ map (note qn) [(Bf, 4), (F, 4), (D, 4), (C, 4), (Bf, 3)]
@@ -58,6 +60,4 @@ partIII :: Music Pitch
 partIII = tempo (160/120) $
     p3Ostinado
     :=: delayM ( 1*p3OstinadoPhraseDur) p3SetA
-    :=: delayM (12*p3OstinadoPhraseDur) p3SetB
-    :=: delayM (26.5*p3OstinadoPhraseDur) p3SetC
-
+    :=: delayM (12*p3OstinadoPhraseDur) (p3SetB :+: p3SetC)
