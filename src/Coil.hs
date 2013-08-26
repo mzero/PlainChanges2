@@ -1,9 +1,13 @@
 module Coil
     ( validate
+    , restrict
+    , Messages
     )
 where
 
 import Codec.Midi as M
+import Data.Either (partitionEithers)
+import Data.Maybe (mapMaybe)
 import MidiUtil
 
 -- | The Coil can play up to 800Hz
@@ -27,4 +31,15 @@ validate = go 0
     go nv ((_, M.NoteOff _ _ _):es) = go (nv - 1) es
     go nv (_:es) = go nv es
     go _ [] = okay
+
+type Messages = [(M.Time, CoilError)]
+
+restrict :: M.Track M.Time -> (Messages, M.Track M.Time)
+restrict = partitionEithers . mapMaybe check
+  where
+    check e@(t, M.NoteOn _ key _) | key <= maxCoilKey = Just $ Right e
+                                  | otherwise = Just $ Left (t, Over800Hz key)
+    check e@(_, M.NoteOff _ key _) | key <= maxCoilKey = Just $ Right e
+                                   | otherwise = Nothing
+    check e = Just $ Right e
 

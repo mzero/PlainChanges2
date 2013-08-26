@@ -75,7 +75,7 @@ performanceMidi = preparePerformance . composedMidi
 -- | Prepare MIDI for performance. Full bass part is allocated to strings, and
 -- all bass parts are adjusted with pre-positioning events.
 preparePerformance :: Midi -> Midi
-preparePerformance = snd . allocateBass
+preparePerformance = snd . allocateBass . snd . restrictCoil
 
 -- | Prepare MIDI for preview on synths. Bass parts are combined back into a
 -- single track, and any pre-positioning evnets are removed.
@@ -104,6 +104,8 @@ midiOnSynth midi = do
     namedIAC = ("IAC Driver" `isPrefixOf`) . name
 
 
+restrictCoil :: Midi -> (Coil.Messages, Midi)
+restrictCoil = processChannels Coil.restrict (== 5)
 
 allocateBass :: Midi -> (MechBass.AllocMessages, Midi)
 allocateBass = processChannels MechBass.allocator (<= 4)
@@ -127,13 +129,15 @@ prepareMidiFiles prefix m = do
     writeFile (prefix ++ "-log.txt") $ unlines logLines
   where
     mComposed = composedMidi $ rest hn :+: m
-    (msgs, mAllocated) = allocateBass mComposed
+    (cMsgs, mRestricted) = restrictCoil mComposed
+    (bMsgs, mAllocated) = allocateBass mRestricted
     mPreviewed = preparePreview mAllocated
     mPerformed = filterMessages (not . isProgramChange) mAllocated
 
     logLines = validateCoil mPerformed
             ++ validateBass mPerformed
-            ++ "== Bass Allocation ==" : showErrorMessages msgs
+            ++ "== Coil Restriction ==" : showErrorMessages cMsgs
+            ++ "== Bass Allocation ==" : showErrorMessages bMsgs
 
 writeMidiFile :: String -> Midi -> IO ()
 writeMidiFile path midi = do
