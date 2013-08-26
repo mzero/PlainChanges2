@@ -14,6 +14,8 @@ import PartII
 import PartIII
 import VolumeTest
 
+import Sound.MidiPlayer
+
 {-
 TODO:
     performance
@@ -95,7 +97,7 @@ midiOnSynth :: Midi -> IO ()
 midiOnSynth midi = do
     devs <- getAllDevices
     case findIacOutput devs of
-        ((iacOut,_):_) -> playMidi iacOut $ preparePreview midi
+        ((iacOut,_):_) -> midiPlayer iacOut $ preparePreview midi
         [] -> putStrLn "*** No IAC Driver output found"
   where
     findIacOutput = filter (namedIAC . snd) .  filter (output . snd)

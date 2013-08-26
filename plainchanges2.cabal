@@ -15,6 +15,7 @@ Executable plainchanges2
     containers,
     transformers,
     Euterpea,
-    HCodecs
+    HCodecs,
+    PortMidi
 
   ghc-options: -Wall -fwarn-tabs -fno-warn-name-shadowing -fno-warn-unused-binds
