@@ -1,11 +1,40 @@
-module VolumeTest (volumeTest) where
+module VolumeTest
+    ( levelTest
+    , bassVolumeTest
+    ) where
 
 import Euterpea
 
 import Elements
 
-volumeTest :: Music Pitch
-volumeTest = line $ map atVolume volumes
+levelTest :: Music Pitch
+levelTest = line parts :+: timesM 4 (chord parts)
+  where
+    parts = [coilTest, bassTest, bellTest, drumTest]
+
+    coilTest = timesM 2 $ onCoil78 (line coilNotes)
+            :+: onCoil78 (timesM 4 $ chord coilNotes)
+            :+: onCoil14 (timesM 4 $ tempo (4/1) $ line coilNotes)
+    coilNotes = map (note qn) [(B,4),(E,5),(Fs,5),(Gs,5)]
+
+    bassTest = bassMF $ bassBit :+: transpose 7 bassBit
+    bassBit = line (concatMap (replicate 2) $ openStrings qn)
+            :+: chord [rest wn, strum en]
+    bellTest = onBells $ line $ zipWith note (cycle [qn, qn, qn, dhn])
+        [ (E,5), (Gs,5), (Fs,5), (B,4)
+        , (E,5), (Fs,5), (Gs,5), (E,5)
+        , (Gs,5), (E,5), (Fs,5), (B,4)
+        , (B,4), (Fs,5), (Gs,5), (E,5)
+        ]
+    drumTest = line $ map (\v -> phrase [Dyn $ StdLoudness v] drumBit) [MP, FF]
+    drumBit = onDrums $
+        timesM 2 (line (map (perc AcousticSnare) [qn, qn, en, en, en]) :+: rest en)
+        :+: timesM 3 (perc RideCymbal2 sn :+: perc RideCymbal2 sn :+: perc CrashCymbal2 en)
+        :+: perc CrashCymbal2 en :+: perc CrashCymbal2 en
+
+
+bassVolumeTest :: Music Pitch
+bassVolumeTest = line $ map atVolume volumes
   where
     atVolume v =
         phrase [Dyn $ Loudness 95] (countOff v)
@@ -20,10 +49,16 @@ volumeTest = line $ map atVolume volumes
         (replicate v $ note sn (G,4))
         (cycle [[], [], [rest sn]])
 
-    arppeg = line $ map (\n -> transpose n strum) [7, 5, 0]
-    strum = phrase [Art $ Legato 3.5 ] $ line
-        [ onBassGString $ note en (G,3)
-        , onBassDString $ note en (D,3)
-        , onBassAString $ note en (A,2)
-        , onBassEString $ note en (E,2)
+    arppeg = line $ map (\n -> transpose n $ strum en) [7, 5, 0]
+
+strum :: Dur -> Music Pitch
+strum = phrase [Art $ Legato 3.5 ] . line . openStrings
+
+openStrings :: Dur -> [Music Pitch]
+openStrings d =
+        [ onBassGString $ note d (G,3)
+        , onBassDString $ note d (D,3)
+        , onBassAString $ note d (A,2)
+        , onBassEString $ note d (E,2)
         ]
+

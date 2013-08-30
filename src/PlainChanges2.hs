@@ -133,10 +133,11 @@ writeMidiFile path midi = do
 
 debugAllParts :: IO ()
 debugAllParts = do
+    prepareMidiFiles "dump/plain-changes-2" plainChanges2_30
     prepareMidiFiles "dump/preamble" preamble
     prepareMidiFiles "dump/partI" partI
     prepareMidiFiles "dump/partII" partII
     prepareMidiFiles "dump/partIII" partIII
-    prepareMidiFiles "dump/volume-test" volumeTest
-
+    prepareMidiFiles "dump/level-test" levelTest
+    prepareMidiFiles "dump/bass-volume-test" bassVolumeTest
 
