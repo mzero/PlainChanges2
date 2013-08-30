@@ -45,26 +45,34 @@ p2coilAccentB3 = onCoil14 $ delayM (8*9*qn)
     accLine m (p,o) = delayM (m*qn) $ ringNotes (sn) [(p,o+2)]
     b3line = concat $ ringOf b3pitches ++ [b3pitches]
 
+p2drum :: Music Pitch
+p2drum = onDrums $
+    vol FF (dash qn 2)
+    :+: vol MP (timesM 3 $ dash qn 2)
+    :+: vol MP (dash sn 4)
+    :+: rest hn
+    :+: phrase [Dyn (Diminuendo 0.5)] (vol MP $ dash sn 4)
+    :+: rest (108*qn)
+    :+: rollAndCrash
+  where
+    dash t m = ringPerc t $ replicate m RideCymbal2
+    vol d = phrase [Dyn $ StdLoudness d]
+
+rollAndCrash :: Music Pitch
+rollAndCrash = phrase [Tmp $ Accelerando 0.20, Dyn $ Crescendo 2, Dyn $ StdLoudness PPP]
+     (timesM 32 (perc RideCymbal2 (sn/2) )) :+: perc RideCymbal2 wn
+
 p2tempo :: Music a -> Music a
 p2tempo m = tempo (startTempo / 120) mAll
   where
     startTempo = 70
-    endTempo = 85
+    endTempo = 80
     accl = (endTempo - startTempo) / endTempo
     firstDur = 6 * 9 * qn
     mFirst = removeZeros $ takeM firstDur m
     mRest = removeZeros $ dropM firstDur m
     mAll = mFirst :+: phrase [Tmp $ Accelerando accl] mRest
 
-interruptionB :: Music Pitch
-interruptionB = tempo (170 / 120) $ v :=: b :=: c :=: d
-  where
-    t = en
-    notes oct = ringNotes t [(C, oct), (G, oct-1)]
-    v = onVoice $ notes 5
-    b = onBass $ notes 4
-    c = onCoil $ notes 5
-    d = onDrums $ ringPerc t [AcousticSnare, LowTom]
 
 partII :: Music Pitch
-partII = (p2tempo $ p2Ostinado :=: p2coil :=: p2coilAccentB3) -- :+: interruptionB
+partII = p2tempo $ delayM (5 * qn) (p2Ostinado :=: p2coil :=: p2coilAccentB3) :=: p2drum

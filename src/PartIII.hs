@@ -42,8 +42,16 @@ p3SetB :: Music Pitch
 p3SetB = onBells (p3r2 :+: rest p3r2dur :+: p3r2' :+: rest p3r2dur :+: p3r2) :+: chord
     [ onBells $ p3r3 :+: p3r3 :+: p3r4
     , onCoil1516 p3r4
+    , delayM (2 * p3r3dur) $ onCoil14 coilOrnaments
     ]
-
+  where
+    coilOrnaments = chord $ map (\(n,m) -> delayM (n*9*en) m)
+        [ (5, ringNotes en [(A,4)])
+        , (6, ringNotes en [(G,4)] :+: ringNotes en [(Ef,4)])
+        , (7, ringNotes sn [(A,4), (G,4), (Ef,4)])
+        , (9, ringNotes sn [(C,5), (D,4), (G,5)] :+: ringNotes en [(C,6)] :+: ringNotes en [(F,6)])
+        , (12, ringNotes sn [(F,6), (D,6), (C,6)])
+        ]
 p3SetC :: Music Pitch
 p3SetC = chord
     [ onBells $ timesM 8 final

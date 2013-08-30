@@ -16,31 +16,15 @@ import VolumeTest
 
 import Sound.MidiPlayer
 
-{-
-TODO:
-    performance
-        [ ] need note off to preceed note on by small fixed amount
-            - for bass
-            - for coil (as otherwise there is no attack)
-        [ ] generate split, 4 midi ch bass line
-        [ ] generate velocity 1 pre-positioning bass commands
-
-    partIII
-        [ ] toll the coil's r3 and "fade"?
-
-    general
-        [ ] volumes?
--}
-
 plainChanges2_30 :: Music Pitch
 plainChanges2_30 =
     rest wn
     :+: preamble
     :+: rest (2*wn)
     :+: partI
-    :+: rest (wn)
+    :+: rest (2*wn)
     :+: partII
-    :+: rest (wn)
+    :+: rest (2*wn)
     :+: partIII
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
