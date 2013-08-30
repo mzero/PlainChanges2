@@ -5,6 +5,7 @@ module Elements
     , onBass, onBells, onCoil, onDrums, onVoice
     , onBassStrings
     , onBassEString, onBassAString, onBassDString, onBassGString
+    , bassFF, bassMF, bassP, bassPP
     , onCoilArt, onCoil14, onCoil12, onCoil78, onCoil1516
     )
 where
@@ -41,7 +42,7 @@ tempoInterp start end = phrase [Tmp $ Accelerando accl] . tempo start
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
 onBass, onBells, onCoil, onDrums, onVoice :: Music a -> Music a
-onBass  = instrument ElectricBassPicked . bassVolume
+onBass  = instrument ElectricBassPicked
 onBells = instrument TubularBells
 onCoil  = instrument Lead2Sawtooth
 onDrums = instrument Percussion
@@ -51,14 +52,15 @@ onVoice = instrument ChoirAahs
 -- They are a bit of a hack: Each is assigned a different instrument, which is
 -- later mapped to the specific channel for the bass string.
 onBassStrings :: [Music a -> Music a]
-onBassStrings = map (\i -> instrument i . bassVolume)
+onBassStrings = map instrument
     [SlapBass1, SlapBass2, SynthBass1, SynthBass2]
 
 onBassEString, onBassAString, onBassDString, onBassGString :: Music a -> Music a
 [onBassEString, onBassAString, onBassDString, onBassGString] = onBassStrings
 
-bassVolume :: Music a -> Music a
-bassVolume = phrase [Dyn $ Loudness 95]
+bassFF, bassMF, bassP, bassPP :: Music a -> Music a
+[bassFF, bassMF, bassP, bassPP] =
+    map (\v -> phrase [Dyn $ Loudness v]) [96, 70, 45, 19]
 
 onCoilArt :: Rational -> Music a -> Music a
 onCoilArt r = onCoil . phrase [Art $ Staccato r]

@@ -20,7 +20,7 @@ b3pitches = [(Df, 4), (C,  4), (Af, 3), (E, 3)]
 b4pitches = [(F,  4), (Ef, 4), (C, 4), (G, 3)]
 
 p2Ostinado :: Music Pitch
-p2Ostinado =
+p2Ostinado = bassMF $
         (onBassEString $ riff  0   0    0 b1pitches)
     :=: (onBassAString $ riff  4   0 (-2) b2pitches)
     :=: (onBassDString $ riff  8   0 (-1) b3pitches)

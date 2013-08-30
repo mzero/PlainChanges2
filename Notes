@@ -9,7 +9,7 @@ MechBass
     - Velocity is mapped into 20 steps via: v*20 >> 7
       across all strings, there are about 4 good steps:
           step 15, vel = 96 - ff
-          step 11, vel = 70 - m
+          step 11, vel = 70 - mf
           step  7, vel = 45 - p
           step  3, vel = 19 - pp
 

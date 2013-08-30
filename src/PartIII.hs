@@ -15,7 +15,8 @@ bFlatMajorScale = [Bf, C, D, Ef, F, G, A, Bf]
 
 
 p3Ostinado :: Music Pitch
-p3Ostinado = onBass $ ringNotes en [(Bf, 3), (F, 3), (D, 3), (C, 3), (Bf, 2)]
+p3Ostinado = onBass $ bassMF $
+    ringNotes en [(Bf, 3), (F, 3), (D, 3), (C, 3), (Bf, 2)]
 
 p3r2, p3r2', p3r3, p3r4 :: Music Pitch
 p3r2 = ringNotes qn [(Bf, 5), (F, 5)]

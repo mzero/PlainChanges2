@@ -13,7 +13,7 @@ gMajorScale = [G, A, B, C, D, E, Fs]
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
 preamble :: Music Pitch
-preamble = onBass bassRingUp :=: onCoil12 coilRingUp
+preamble = bassRingUp :=: onCoil12 coilRingUp
   where
     ringUp d p = line [ note (n*d) p | n <- [1..8]]
     bassRingUp = chord $ zipWith3 bassRingOne
@@ -21,7 +21,7 @@ preamble = onBass bassRingUp :=: onCoil12 coilRingUp
         [0..]
         [(E,3), (A,3), (D,4), (G,4)]
     bassRingOne onString n p =
-        onString $ delayM (fromIntegral n*(24*en-sn))
+        onString $ bassMF $ delayM (fromIntegral n*(24*en-sn))
             $ ringUp en p :+: timesM ((3-n)*3+3) (note wn p)
     coilRingUp = chord
         [ ringTail  50 sn 0 (B,4)
@@ -41,7 +41,7 @@ preamble = onBass bassRingUp :=: onCoil12 coilRingUp
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
 p1Ostinado :: Music Pitch
-p1Ostinado = onBass $ line $ concat
+p1Ostinado = onBass $ bassMF $ line $ concat
     [ riffs qn starts
     , riffs en mids
     , riffs en finals
