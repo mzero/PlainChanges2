@@ -2,6 +2,6 @@
 :m + Euterpea.IO.MIDI
 :m + Euterpea.IO.MIDI.MidiIO
 
-:l PlainChanges2.hs
+:l src/PlainChanges2.hs
 
 initializeMidi >> getAllDevices >>= mapM_ print

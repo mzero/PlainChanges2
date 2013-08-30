@@ -7,6 +7,11 @@ MechBass
         A - 55.0 Hz - 33 - (A,2)
         E - 41.2 Hz - 28 - (E,2)
     - Velocity is mapped into 20 steps via: v*20 >> 7
+      across all strings, there are about 4 good steps:
+          step 15, vel = 96 - ff
+          step 11, vel = 70 - m
+          step  7, vel = 45 - p
+          step  3, vel = 19 - pp
 
     - range: octave and semitone!
         G - (G,3) ~ (Gs, 4)
@@ -14,35 +19,30 @@ MechBass
         A - (A,2) ~ (As, 3)
         E - (E,2) ~ (F, 3)
 
+
 Coil
     - range: upto 800Hz
         (G,6) - MIDI 79 - 784Hz
 
-[] set bass volume to 95
-    [] run a test with a ring at each of several volumes
-
 
 
 Preamble
-  - longer last note? longer extra note?
+  [] last note too long?
 
 Part I
   - play bass in unison on coil
-  - play bass in 5ths/4ths on bass, staggered
-
   - repeat of staggered coil? faster?
   - decending ladder of r2 on coil?
-  - r3 of percussion
-  - r3 of just snare?
-  - a different arrangement for each r4 segment?
+  [] refactor code
 
 Part II
+  [] second higest note is out of range for string!!
   - inter-woven staccato r3 on coil?
   - counting / singing of sequences of the r4?
   - counting whole r3?
 
 Part III
-  - shift whole thing down so coil can be shifted up?
+  [] why is 2nd to last note so late?
   - short coil and percussion r2 & r3s during bell r4
 
 Misc
