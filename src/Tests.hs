@@ -1,6 +1,7 @@
-module VolumeTest
+module Tests
     ( levelTest
     , bassVolumeTest
+    , bassTimingTest
     ) where
 
 import Euterpea
@@ -61,4 +62,15 @@ openStrings d =
         , onBassAString $ note d (A,2)
         , onBassEString $ note d (E,2)
         ]
+
+
+bassTimingTest :: Music Pitch
+bassTimingTest = line $ map timingTo [0..12]
+  where
+    timingTo t = rest hn :+: line (map (timingToFrom t) [0..12])
+    timingToFrom t f =
+        onBassGString (fretNote qn (G,3) f 1 :+: fretNote qn (G,3) t 70)
+        :=:
+        onBassDString (fretNote qn (D,3) t 1 :+: fretNote qn (D,3) t 70)
+    fretNote d p t v = phrase [Dyn $ Loudness v] $ note d (trans t p)
 

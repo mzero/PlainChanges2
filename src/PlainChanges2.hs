@@ -12,7 +12,7 @@ import MidiUtil
 import PartI
 import PartII
 import PartIII
-import VolumeTest
+import Tests
 
 import Sound.MidiPlayer
 
@@ -140,4 +140,5 @@ debugAllParts = do
     prepareMidiFiles "dump/partIII" partIII
     prepareMidiFiles "dump/level-test" levelTest
     prepareMidiFiles "dump/bass-volume-test" bassVolumeTest
+    prepareMidiFiles "dump/bass-timing-test" bassTimingTest
 
