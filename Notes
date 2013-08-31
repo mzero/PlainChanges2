@@ -25,31 +25,33 @@ Coil
         (G,6) - MIDI 79 - 784Hz
 
 
-
 Preamble
   [] last note too long?
 
 Part I
-  - play bass in unison on coil
-  - repeat of staggered coil? faster?
-  - decending ladder of r2 on coil?
   [] refactor code
+  - section D and E need work
 
 Part II
   [] second higest note is out of range for string!!
-  - inter-woven staccato r3 on coil?
-  - counting / singing of sequences of the r4?
-  - counting whole r3?
+  - coil in 2nd half okay? replace with faster? r2s? r3s ala end?
 
 Part III
   [] why is 2nd to last note so late?
-  - short coil and percussion r2 & r3s during bell r4
+  [] 7 or 8 repeats?
 
 Misc
   - timing of inter-part rests
   - unplayable notes
     - on coil on part III
     - on bass throughout
+  [] fermata
+  [] bass timing test
+
+  - inter-part rest length
+  - volume tweaks per phrase?
+  - articulation tweaks per phrase?
+
 
 
 Durations

@@ -100,7 +100,7 @@ startSectD = start4s + dur4s + 3 * phrase4
 
 sectionD :: Music Pitch
 sectionD = delayM startSectD $
-    onDrums percD
+    p1OnDrums percD
     :=: onCoil12 coilD
     :=: onCoil78 coilD'
   where
@@ -125,7 +125,7 @@ startSectE = start4s + 2 * dur4s + 2 * phrase4
 
 sectionE :: Music Pitch
 sectionE = delayM startSectE $
-    onDrums percE
+    p1OnDrums percE
     :=: onCoil78 coilE
   where
     percE = ringPerc q [AcousticSnare, AcousticSnare, BassDrum1]
@@ -147,7 +147,7 @@ startSectF = start4s + 3 * dur4s + 2 * phrase4
 sectionF :: Music Pitch
 sectionF = delayM startSectF $
     onCoil78 coilF
-    :=: onDrums percF
+    :=: p1OnDrums percF
   where
     coilF = chord $ zipWith (\n ps -> delayM (n*37*sn) $ ringNotes sn ps) [0..]
         [ [(G,6), (E,6), (C, 6), (G, 5)]
@@ -167,6 +167,9 @@ p1coil = onCoil78 $ p1coilA :=: p1coilB :=: p1coilC
 
 partITempo :: Music Pitch -> Music Pitch
 partITempo = tempoInterp (125/120) (130/120)
+
+p1OnDrums :: Music Pitch -> Music Pitch
+p1OnDrums = onDrums . phrase [Dyn $ StdLoudness MP]
 
 partI :: Music Pitch
 partI = partITempo $ p1Ostinado :=: p1coil :=: sectionD :=: sectionE :=: sectionF
