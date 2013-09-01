@@ -26,29 +26,35 @@ Coil
 
 
 Preamble
-  [] last note too long?
+  [ ] last note too long?
 
 Part I
-  [] refactor code
-  - section D and E need work
+  [ ] remove bass drum from drum parts (?)
+  - refactor code
+  - section D may be okay
+  - section E needs work
 
 Part II
-  [] second higest note is out of range for string!!
-  - coil in 2nd half okay? replace with faster? r2s? r3s ala end?
+  [ ] (C,4) on b2pitches is out of range for A string!!
+      could be (Bf,4)
+  [ ] perhaps start drum r2s on r4 phrase boundries (9 beats)
+    - then can start with full one, play 5 of 'em total
+  [ ] fast drum gap could be qn longer?
+  - three coil parts in last third: replace with faster? r2s? r3s ala end?
 
 Part III
-  [] why is 2nd to last note so late?
-  [] 7 or 8 repeats?
+  - why is 2nd to last note so late?
+  - 7 or 8 repeats?
 
 Misc
-  - timing of inter-part rests
+  [x] bass timing test
+  [ ] timing of inter-part rests - maybe okay
+  [ ] try dropping coil an octave for performance
+  [ ] fermata (peramble?, part II and III)
   - unplayable notes
     - on coil on part III
     - on bass throughout
-  [] fermata
-  [] bass timing test
-
-  - inter-part rest length
+  - bell dynamics
   - volume tweaks per phrase?
   - articulation tweaks per phrase?
 
