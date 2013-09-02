@@ -19,44 +19,57 @@ b2pitches = [(C,  4), (Af, 3), (F,  3), (C, 3)]
 b3pitches = [(Df, 4), (C,  4), (Af, 3), (E, 3)]
 b4pitches = [(F,  4), (Ef, 4), (C, 4), (G, 3)]
 
-p2Ostinado :: Music Pitch
-p2Ostinado = bassMF $
+r4phraseDur :: Dur
+r4phraseDur = 9*qn
+
+ostinado :: Music Pitch
+ostinado = bassMF $
         (onBassEString $ riff  0   0    0 b1pitches)
     :=: (onBassAString $ riff  4   0 (-2) b2pitches)
     :=: (onBassDString $ riff  8   0 (-1) b3pitches)
     :=: (onBassGString $ riff 10   4 (-3) b4pitches)
   where
-    riff a b c ps = delayM (a*9*qn + b*qn + c*sn) $ ringNotes qn ps
+    riff a b c ps = delayM (a*r4phraseDur + b*qn + c*sn) $ ringNotes qn ps
 
-p2coil :: Music Pitch
-p2coil = onCoil14
+
+coil :: Music Pitch
+coil = onCoil14
     $   riff  2 [(Af, 5), (F,  5), (C, 5)]
     :=: riff  3 [(C,  6), (Af, 5), (E, 5)]
     :=: riff  7 [(Ef, 6), (C, 6), (G, 5)]
   where
-    riff a ps = delayM (a*9*qn) $ ringNotes (sn/2) ps
+    riff a ps = delayM (a*r4phraseDur) $ ringNotes (sn/2) ps
 
-p2coilAccentB3 :: Music Pitch
-p2coilAccentB3 = onCoil14 $ delayM (8*9*qn)
+coilAccentB3 :: Music Pitch
+coilAccentB3 = onCoil14 $ delayM (8*r4phraseDur)
     $ chord (map acc [4, 6, 10, 11, 12])
   where
-    acc n = delayM (fromIntegral n*9*qn) $ chord $
+    acc n = delayM (fromIntegral n*r4phraseDur) $ chord $
         zipWith accLine [0..] $ take 8 $ drop (n * 8) b3line
     accLine m (p,o) = delayM (m*qn) $ ringNotes (sn) [(p,o+2)]
     b3line = concat $ ringOf b3pitches ++ [b3pitches]
 
-p2drum :: Music Pitch
-p2drum = onDrums $
-    vol FF (dash qn 2)
-    :+: vol MP (timesM 3 $ dash qn 2)
-    :+: vol MP (dash sn 4)
-    :+: rest hn
-    :+: phrase [Dyn (Diminuendo 0.5)] (vol MP $ dash sn 4)
-    :+: rest (108*qn)
-    :+: rollAndCrash
+percA :: Music Pitch
+percA = onDrums $
+    vol FF slowPerc
+    :+: timesM 3 (vol MP slowPerc)
   where
-    dash t m = ringPerc t $ replicate m RideCymbal2
-    vol d = phrase [Dyn $ StdLoudness d]
+    slowPerc = ringCymbal qn 2
+
+ringCymbal :: Dur -> Int -> Music Pitch
+ringCymbal d n = ringPerc d $ replicate n RideCymbal2
+
+vol :: StdLoudness -> Music a -> Music a
+vol d = phrase [Dyn $ StdLoudness d]
+
+percB :: Music Pitch
+percB = onDrums $ delayM (4*r4phraseDur - qn) $
+    vol MP (ringCymbal sn 4)
+    :+: rest (11*sn)
+    :+: phrase [Dyn (Diminuendo 0.5)] (vol MP $ ringCymbal sn 4)
+
+percC :: Music Pitch
+percC = onDrums $ delayM (810*sn) rollAndCrash
 
 rollAndCrash :: Music Pitch
 rollAndCrash = phrase [Tmp $ Accelerando 0.20, Dyn $ Crescendo 2, Dyn $ StdLoudness PPP]
@@ -68,11 +81,12 @@ p2tempo m = tempo (startTempo / 120) mAll
     startTempo = 70
     endTempo = 80
     accl = (endTempo - startTempo) / endTempo
-    firstDur = 6 * 9 * qn
+    firstDur = 6 * r4phraseDur
     mFirst = removeZeros $ takeM firstDur m
     mRest = removeZeros $ dropM firstDur m
     mAll = mFirst :+: phrase [Tmp $ Accelerando accl] mRest
 
 
 partII :: Music Pitch
-partII = p2tempo $ delayM (5 * qn) (p2Ostinado :=: p2coil :=: p2coilAccentB3) :=: p2drum
+partII = p2tempo $ percA :=: delayM (5*qn)
+        (ostinado :=: coil :=: coilAccentB3 :=: percB :=: percC)
