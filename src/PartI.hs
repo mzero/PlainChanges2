@@ -128,8 +128,8 @@ sectionE = delayM startSectE $
     p1OnDrums percE
     :=: onCoil78 coilE
   where
-    percE = ringPerc q [AcousticSnare, AcousticSnare, BassDrum1]
-        :+: ringPerc q [AcousticSnare, AcousticSnare, BassDrum1]
+    percE = ringSnareButOne q 3
+        :+: ringSnareButOne q 3
     coilE = chord $ zipWith riff [0..]
                 [ [(Fs,6), (B,5), (G, 5)]
                 , [(D,6), (A, 5), (Fs, 5)]
@@ -160,7 +160,11 @@ sectionF = delayM startSectF $
         , [(G,5), (D,5), (B, 4), (E, 4)]
         ]
     percF = timesM 3 $
-        rest hn :+: ringPerc sn [AcousticSnare, AcousticSnare, AcousticSnare, BassDrum1]
+        rest hn :+: ringSnareButOne sn 4
+
+ringSnareButOne :: Dur -> Int -> Music Pitch
+ringSnareButOne d n = line $ map (uncurry $ flip ($)) $
+    ring d $ replicate (n-1) (perc AcousticSnare) ++ [rest]
 
 p1coil :: Music Pitch
 p1coil = onCoil78 $ p1coilA :=: p1coilB :=: p1coilC

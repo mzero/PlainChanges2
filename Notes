@@ -29,7 +29,7 @@ Preamble
   [ ] last note too long?
 
 Part I
-  [ ] remove bass drum from drum parts (?)
+  [x] remove bass drum from drum parts (?)
   - refactor code
   - section D may be okay
   - section E needs work
