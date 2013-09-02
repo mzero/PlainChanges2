@@ -34,7 +34,7 @@ preamble = bassRingUp :=: onCoil12 coilRingUp
         ] :+: final
     ringTail r d t p =
         delayM (r*en) $ ringUp d p :+: timesM t (note (8*d) p)
-    final = chord $ map (note (3*hn)) [(G,5), (D,6), (A,5), (E,6)]
+    final = chord $ map (note (2*hn)) [(G,5), (D,6), (A,5), (E,6)]
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- Part I
