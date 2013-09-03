@@ -1,6 +1,7 @@
 module Coil
     ( validate
     , restrict
+    , dropAnOctave
     , Messages
     )
 where
@@ -43,3 +44,9 @@ restrict = partitionEithers . mapMaybe check
                                    | otherwise = Nothing
     check e = Just $ Right e
 
+dropAnOctave :: Channel -> M.Track a -> M.Track a
+dropAnOctave ch = map adjust
+  where
+    adjust (t, NoteOn  c k v) | c == ch && k >= 12 = (t, NoteOn  c (k - 12) v)
+    adjust (t, NoteOff c k v) | c == ch && k >= 12 = (t, NoteOff c (k - 12) v)
+    adjust e = e

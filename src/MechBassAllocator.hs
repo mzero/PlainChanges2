@@ -238,7 +238,7 @@ allocateNoteOn te chOrig key vel = do
 
 -- | Recombine allocated notes back onto one channel.
 -- Prepositioning events (NoteOn w/ velocity 1) are stripped.
-recombine :: Channel -> Track Time -> Track Time
+recombine :: Channel -> Track a -> Track a
 recombine rch = mapMaybe adjust
   where
     adjust e@(t, NoteOn ch k v)

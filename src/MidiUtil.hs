@@ -124,12 +124,10 @@ processChannels f chTest midi = (a, midi')
     ft = if null otherTracks then SingleTrack else MultiTrack
     td = timeDiv midi
 
-processTracks :: (M.Track Time -> M.Track Time) -> M.Midi -> M.Midi
-processTracks f midi = midi { tracks = map (t' . f . t) $ tracks midi }
+processTracks :: (M.Track Ticks -> M.Track Ticks) -> M.Midi -> M.Midi
+processTracks f midi = midi { tracks = map f' $ tracks midi }
   where
-    t = toRealTime td . toAbsTime
-    t' = fromAbsTime . fromRealTime td
-    td = timeDiv midi
+    f' = fromAbsTime . f . toAbsTime
 
 prepTrackEnds :: M.Midi -> M.Midi
 prepTrackEnds midi = midi { tracks = map prep $ tracks midi }

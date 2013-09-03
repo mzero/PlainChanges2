@@ -109,6 +109,7 @@ prepareMidiFiles :: String -> Music Pitch -> IO ()
 prepareMidiFiles prefix m = do
     writeMidiFile (prefix ++ "-composed") mComposed
     writeMidiFile (prefix ++ "-performed") mPerformed
+    writeMidiFile (prefix ++ "-dropped") mDropped
     writeMidiFile (prefix ++ "-previewed") mPreviewed
     writeFile (prefix ++ "-log.txt") $ unlines logLines
   where
@@ -117,6 +118,7 @@ prepareMidiFiles prefix m = do
     (bMsgs, mAllocated) = allocateBass mRestricted
     mPreviewed = preparePreview mAllocated
     mPerformed = filterMessages (not . isProgramChange) mAllocated
+    mDropped = processTracks (Coil.dropAnOctave 5) mPerformed
 
     logLines = validateCoil mPerformed
             ++ validateBass mPerformed
