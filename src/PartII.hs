@@ -23,7 +23,7 @@ r4phraseDur :: Dur
 r4phraseDur = 9*qn
 
 ostinado :: Music Pitch
-ostinado = bassMF $
+ostinado = bassMF $ holdLast $
         (onBassEString $ riff  0   0    0 b1pitches)
     :=: (onBassAString $ riff  4   0 (-2) b2pitches)
     :=: (onBassDString $ riff  8   0 (-1) b3pitches)
@@ -72,8 +72,9 @@ percC :: Music Pitch
 percC = onDrums $ delayM (810*sn) rollAndCrash
 
 rollAndCrash :: Music Pitch
-rollAndCrash = phrase [Tmp $ Accelerando 0.20, Dyn $ Crescendo 2, Dyn $ StdLoudness PPP]
-     (timesM 32 (perc RideCymbal2 (sn/2) )) :+: perc RideCymbal2 wn
+rollAndCrash = holdLast $
+     phrase [Tmp $ Accelerando 0.20, Dyn $ Crescendo 2, Dyn $ StdLoudness PPP]
+     (timesM 32 (perc RideCymbal2 (sn/2) )) :+: perc RideCymbal2 dqn
 
 p2tempo :: Music a -> Music a
 p2tempo m = tempo (startTempo / 120) mAll

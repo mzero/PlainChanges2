@@ -7,6 +7,9 @@ module Elements
     , onBassEString, onBassAString, onBassDString, onBassGString
     , bassFF, bassMF, bassP, bassPP
     , onCoilArt, onCoil14, onCoil12, onCoil78, onCoil1516
+
+    , extendedPlayer, toExtendedPerf
+    , holdLast
     )
 where
 
@@ -69,3 +72,42 @@ onCoil14, onCoil12, onCoil78, onCoil1516 :: Music a -> Music a
 [onCoil14, onCoil12, onCoil78, onCoil1516] =
         map onCoilArt [1/4, 1/2, 7/8, 15/16]
 
+-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+-- Helpers
+-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+
+extendedPlayer :: Player (Pitch, [NoteAttribute])
+extendedPlayer = fancyPlayer { pName = "Extended", interpPhrase = extraInterp }
+  where
+    extraInterp :: PMap a -> Context a -> [PhraseAttribute]
+                     -> Music a -> (Performance, DurT)
+    extraInterp pm ctx pas m = case break isExtraAttr pas of
+        ([], [])            -> perf pm ctx m
+        ([], (ea : pre))    -> extraInterpAttr ea $ extraInterp pm ctx pre m
+        (_,  [])            -> fancyInterpPhrase pm ctx pas m
+        (post, pre)         -> perf pm ctx $ phrase post $ phrase pre m
+
+    isExtraAttr :: PhraseAttribute -> Bool
+    isExtraAttr (Art Fermata) = True
+    isExtraAttr (Art FermataDown) = True
+    isExtraAttr _ = False
+
+    extraInterpAttr (Art Fermata) = extendLastEvent
+    extraInterpAttr (Art FermataDown) = extendLastEvent
+    extraInterpAttr _ = id
+
+    extendLastEvent p@([],_) = p
+    extendLastEvent (evs,d) = (init evs ++ [extendEvent $ last evs], d)
+
+    extendEvent ev = ev { eDur = 4 * eDur ev }
+
+toExtendedPerf :: Performable a => Music a -> Performance
+toExtendedPerf = fst . perfDur extPMap extCon
+  where
+    extPMap "Extended" = extendedPlayer
+    extPMap p = defPMap p
+
+    extCon = defCon { cPlayer = extendedPlayer }
+
+holdLast :: Music a -> Music a
+holdLast = phrase [Art Fermata]

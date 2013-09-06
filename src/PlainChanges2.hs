@@ -6,6 +6,7 @@ import Euterpea
 import Euterpea.IO.MIDI.MidiIO (getAllDevices)
 
 import qualified Coil
+import Elements
 import qualified MechBass
 import qualified MechBassAllocator as MechBass
 import MidiUtil
@@ -18,14 +19,15 @@ import Sound.MidiPlayer
 
 plainChanges2_30 :: Music Pitch
 plainChanges2_30 =
-    rest wn
+    rest hn
     :+: preamble
-    :+: rest (2*wn)
+    :+: rest dwn
     :+: partI
-    :+: rest (2*wn)
+    :+: rest dwn
     :+: partII
-    :+: rest (2*wn)
+    :+: rest wn
     :+: partIII
+    :+: rest (4*wn)
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- Performance
@@ -49,7 +51,7 @@ patchMap = [ (SynthBass2, 0)            -- MechBass G string
 -- | Convert music to MIDI, as composed. Generally this form isn't playable
 -- directly, as the bass part is divided amongst five channels.
 composedMidi :: Music Pitch -> Midi
-composedMidi m = toMidi (defToPerf m) patchMap
+composedMidi m = toMidi (toExtendedPerf m) patchMap
 
 -- | Convert music to MIDI for performance. This has all the bass parts prepared
 -- for the MechBass, with string allocations and pre-positioning events.

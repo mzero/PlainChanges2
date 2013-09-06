@@ -44,13 +44,14 @@ Part II
 
 Part III
   - why is 2nd to last note so late?
-  - 7 or 8 repeats?
+  [x] 7 repeats?
 
 Misc
+  [ ] update MechBass timing to +30% (yikes!)
   [x] bass timing test
-  [ ] timing of inter-part rests - maybe okay
-  [ ] try dropping coil an octave for performance
-  [ ] fermata (peramble?, part II and III)
+  [x] timing of inter-part rests - shortened
+  [-] try dropping coil an octave for performance
+  [x] fermata (part II and III)
   - unplayable notes
     - on coil on part III
     - on bass throughout
@@ -131,7 +132,22 @@ G,D,B,E - 4,2,4            |-----------|-----|--------|
 
 
 
+Issues in Euterpia & related Packages
 
+[] midiPlayer is awful:
+  [] no interactive controls at all... not even pause
+  [] killing it doesn't silence all notes
+  [] uses globals for no reason
+
+[] no way to extend fancy player
+  [] for example, to support fermata
+
+[] takeM and dropM should removeZeros - useless otherwise!
+
+[] Accelerando and Ritardando are awkward to use
+  [] ditto Crescendo and Dimunendo
+
+[] Distinction between Note attributes and Phrase attributes?
 
 
 
