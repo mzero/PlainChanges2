@@ -72,6 +72,63 @@ Durations
 
 
 
+Coil articulation usage
+
+  1/4
+    Part II:  fast r2s                    sn/2      @ 70 ~ 80
+              tracking r1s                sn        @ 70 ~ 80
+
+    Part III: ornaments                   en        @ 160
+                                          sn        @ 160
+
+  1/2
+    Preamble: ring up                     [1..8]*sn @ 120
+
+    Part I:   part of section D (?)       hn        @ 125 ~ 130
+
+  7/8
+    Part I:   most parts                  qn        @ 125 ~ 130
+                                          en
+                                          dsn
+                                          sn
+                                          en
+                                          dsn
+                                          sn
+
+  15/16
+    Part III: more parts                  qn        @ 160
+                                          en        @ 160
+
+
+
+bells have no sustain, just long release
+bass is same, only electric bass is typically run through a compressor,
+  giving it sustain, and programmed short release
+
+staccato notes are currently okay played at 1/4 duration,
+  but could also probably be simply played at 30 ~ 50ms.
+  -- notated (Art $ Staccato (1/4))
+  -- played on coil as fixed duration of 45ms.
+  -- played on strings as staccato, 1/4 duration of notated time
+
+
+ring-up could be played non-sustained... though the final chord sounds awesome
+  at double length. Perhap... er... leave it at 1/2 duration?
+  -- notated (Art $ Staccato (1/2))
+  -- played on coil as fixed duration of 90ms. (?)
+  -- played on strings as staccato, 1/2 duration of notated time
+
+legato notes - difference between 7/8 and 15/16 is probably moot
+  ideas:
+    1) play them in the 90 ~ 120 ms. range
+    2) as #1, but arpeggiated
+    3) In part I, the 1/2 dur is okay
+    4) In part III, the 1/2 dur sounds like a march....
+  -- notated (Art $ Legato (15/16))
+  -- played on coil as 1/2 duration?
+  -- played on coil as min(1/2 duration, 150ms)
+
+
 
 
 

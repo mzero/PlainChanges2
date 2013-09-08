@@ -6,9 +6,10 @@ module Elements
     , onBassStrings
     , onBassEString, onBassAString, onBassDString, onBassGString
     , bassFF, bassMF, bassP, bassPP
-    , onCoilArt, onCoil14, onCoil12, onCoil78, onCoil1516
+    , onCoilShort, onCoilRingUp, onCoilLong
 
     , extendedPlayer, toExtendedPerf
+    , coilPlayer, toCoilPerf
     , holdLast
     )
 where
@@ -47,7 +48,7 @@ tempoInterp start end = phrase [Tmp $ Accelerando accl] . tempo start
 onBass, onBells, onCoil, onDrums, onVoice :: Music a -> Music a
 onBass  = instrument ElectricBassPicked
 onBells = instrument TubularBells
-onCoil  = instrument Lead2Sawtooth
+onCoil  = instrument Lead2Sawtooth . player "Coil"
 onDrums = instrument Percussion
 onVoice = instrument ChoirAahs
 
@@ -68,33 +69,44 @@ bassFF, bassMF, bassP, bassPP :: Music a -> Music a
 onCoilArt :: Rational -> Music a -> Music a
 onCoilArt r = onCoil . phrase [Art $ Staccato r]
 
-onCoil14, onCoil12, onCoil78, onCoil1516 :: Music a -> Music a
-[onCoil14, onCoil12, onCoil78, onCoil1516] =
-        map onCoilArt [1/4, 1/2, 7/8, 15/16]
+onCoilShort, onCoilRingUp, onCoilLong :: Music a -> Music a
+onCoilShort = onCoil . phrase [Art $ Staccato (1/4)]
+onCoilRingUp = onCoil . phrase [Art $ Staccato (1/2)]
+onCoilLong = onCoil . phrase [Art $ Legato 1]
+
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- Helpers
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
-extendedPlayer :: Player (Pitch, [NoteAttribute])
-extendedPlayer = fancyPlayer { pName = "Extended", interpPhrase = extraInterp }
+type AttributeTest = PhraseAttribute -> Bool
+type AttributeApply =
+    PhraseAttribute -> (Performance, DurT) -> (Performance, DurT)
+
+extendFancyPlayer :: String -> AttributeTest -> AttributeApply
+    -> Player (Pitch, [NoteAttribute])
+extendFancyPlayer name aTest aApply =
+    fancyPlayer { pName = name, interpPhrase = interp }
   where
-    extraInterp :: PMap a -> Context a -> [PhraseAttribute]
+    interp :: PMap a -> Context a -> [PhraseAttribute]
                      -> Music a -> (Performance, DurT)
-    extraInterp pm ctx pas m = case break isExtraAttr pas of
+    interp pm ctx pas m = case break aTest pas of
         ([], [])            -> perf pm ctx m
-        ([], (ea : pre))    -> extraInterpAttr ea $ extraInterp pm ctx pre m
+        ([], (ea : pre))    -> aApply ea $ interp pm ctx pre m
         (_,  [])            -> fancyInterpPhrase pm ctx pas m
         (post, pre)         -> perf pm ctx $ phrase post $ phrase pre m
 
-    isExtraAttr :: PhraseAttribute -> Bool
+
+extendedPlayer :: Player (Pitch, [NoteAttribute])
+extendedPlayer = extendFancyPlayer "Extended" isExtraAttr extraInterp
+  where
     isExtraAttr (Art Fermata) = True
     isExtraAttr (Art FermataDown) = True
     isExtraAttr _ = False
 
-    extraInterpAttr (Art Fermata) = extendLastEvent
-    extraInterpAttr (Art FermataDown) = extendLastEvent
-    extraInterpAttr _ = id
+    extraInterp (Art Fermata) = extendLastEvent
+    extraInterp (Art FermataDown) = extendLastEvent
+    extraInterp _ = id
 
     extendLastEvent p@([],_) = p
     extendLastEvent (evs,d) = (init evs ++ [extendEvent $ last evs], d)
@@ -102,12 +114,40 @@ extendedPlayer = fancyPlayer { pName = "Extended", interpPhrase = extraInterp }
     extendEvent ev = ev { eDur = 4 * eDur ev }
 
 toExtendedPerf :: Performable a => Music a -> Performance
-toExtendedPerf = fst . perfDur extPMap extCon
+toExtendedPerf = fst . perfDur pMap con0
   where
-    extPMap "Extended" = extendedPlayer
-    extPMap p = defPMap p
+    pMap "Extended" = extendedPlayer
+    pMap p = defPMap p
 
-    extCon = defCon { cPlayer = extendedPlayer }
+    con0 = defCon { cPlayer = extendedPlayer }
+
+coilPlayer :: Player (Pitch, [NoteAttribute])
+coilPlayer = basicCoilPlayer { playNote = (playNote basicCoilPlayer) . down12 }
+  where
+    basicCoilPlayer = extendFancyPlayer "Coil" isCoilAttr coilInterp
+    down12 ctx = ctx { cPch = cPch ctx - 12 }
+
+    isCoilAttr (Art (Staccato _)) = True
+    isCoilAttr (Art (Legato _)) = True
+    isCoilAttr _ = False
+
+    coilInterp (Art (Staccato f)) | f <= 1/4 = mapDurs (const 0.045)
+                                  | f <= 1/2 = mapDurs (const 0.090)
+                                  | otherwise = id
+    coilInterp (Art (Legato _)) = mapDurs (\d -> (d * 7/8) `min` 0.150)
+    coilInterp _ = id
+
+    mapDurs f (evs,d) = (map (adjustDur f) evs, d)
+    adjustDur f ev = ev { eDur = f $ eDur ev }
+
+toCoilPerf :: Performable a => Music a -> Performance
+toCoilPerf = fst . perfDur pMap con0
+  where
+    pMap "Extended" = extendedPlayer
+    pMap "Coil" = coilPlayer
+    pMap p = defPMap p
+
+    con0 = defCon { cPlayer = extendedPlayer }
 
 holdLast :: Music a -> Music a
 holdLast = phrase [Art Fermata]

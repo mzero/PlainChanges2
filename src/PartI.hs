@@ -13,7 +13,7 @@ gMajorScale = [G, A, B, C, D, E, Fs]
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
 preamble :: Music Pitch
-preamble = bassRingUp :=: onCoil12 coilRingUp
+preamble = bassRingUp :=: onCoilRingUp coilRingUp
   where
     ringUp d p = line [ note (n*d) p | n <- [1..8]]
     bassRingUp = chord $ zipWith3 bassRingOne
@@ -101,8 +101,8 @@ startSectD = start4s + dur4s + 3 * phrase4
 sectionD :: Music Pitch
 sectionD = delayM startSectD $
     p1OnDrums percD
-    :=: onCoil12 coilD
-    :=: onCoil78 coilD'
+    :=: onCoilLong coilD
+    :=: onCoilLong coilD'
   where
     percD = timesM 8 $ ringPerc en [AcousticSnare, AcousticSnare]
     coilD = delayM (20*en) $ line $ map (ringNotes en) pairs
@@ -126,7 +126,7 @@ startSectE = start4s + 2 * dur4s + 2 * phrase4
 sectionE :: Music Pitch
 sectionE = delayM startSectE $
     p1OnDrums percE
-    :=: onCoil78 coilE
+    :=: onCoilLong coilE
   where
     percE = ringSnareButOne q 3
         :+: ringSnareButOne q 3
@@ -146,7 +146,7 @@ startSectF = start4s + 3 * dur4s + 2 * phrase4
 
 sectionF :: Music Pitch
 sectionF = delayM startSectF $
-    onCoil78 coilF
+    onCoilLong coilF
     :=: p1OnDrums percF
   where
     coilF = chord $ zipWith (\n ps -> delayM (n*37*sn) $ ringNotes sn ps) [0..]
@@ -167,7 +167,7 @@ ringSnareButOne d n = line $ map (uncurry $ flip ($)) $
     ring d $ replicate (n-1) (perc AcousticSnare) ++ [rest]
 
 p1coil :: Music Pitch
-p1coil = onCoil78 $ p1coilA :=: p1coilB :=: p1coilC
+p1coil = onCoilLong $ p1coilA :=: p1coilB :=: p1coilC
 
 partITempo :: Music Pitch -> Music Pitch
 partITempo = tempoInterp (125/120) (130/120)

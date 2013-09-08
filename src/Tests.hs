@@ -13,9 +13,9 @@ levelTest = line parts :+: timesM 4 (chord parts)
   where
     parts = [coilTest, bassTest, bellTest, drumTest]
 
-    coilTest = timesM 2 $ onCoil78 (line coilNotes)
-            :+: onCoil78 (timesM 4 $ chord coilNotes)
-            :+: onCoil14 (timesM 4 $ tempo (4/1) $ line coilNotes)
+    coilTest = timesM 2 $ onCoilLong (line coilNotes)
+            :+: onCoilLong (timesM 4 $ chord coilNotes)
+            :+: onCoilShort (timesM 4 $ tempo (4/1) $ line coilNotes)
     coilNotes = map (note qn) [(B,4),(E,5),(Fs,5),(Gs,5)]
 
     bassTest = bassMF $ bassBit :+: transpose 7 bassBit

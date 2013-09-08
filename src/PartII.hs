@@ -33,7 +33,7 @@ ostinado = bassMF $ holdLast $
 
 
 coil :: Music Pitch
-coil = onCoil14
+coil = onCoilShort
     $   riff  2 [(Af, 5), (F,  5), (C, 5)]
     :=: riff  3 [(C,  6), (Af, 5), (E, 5)]
     :=: riff  7 [(Ef, 6), (C, 6), (G, 5)]
@@ -41,7 +41,7 @@ coil = onCoil14
     riff a ps = delayM (a*r4phraseDur) $ ringNotes (sn/2) ps
 
 coilAccentB3 :: Music Pitch
-coilAccentB3 = onCoil14 $ delayM (8*r4phraseDur)
+coilAccentB3 = onCoilShort $ delayM (8*r4phraseDur)
     $ chord (map acc [4, 6, 10, 11, 12])
   where
     acc n = delayM (fromIntegral n*r4phraseDur) $ chord $
