@@ -44,7 +44,7 @@ patchMap = [ (SynthBass2, 0)            -- MechBass G string
            , (ElectricBassPicked, 4)    -- whole bass part
            , (Lead2Sawtooth, 5)         -- Coil
            , (TubularBells, 6)          -- bells
-           , (ChoirAahs, 7)             -- voices
+           , (Pad6Metallic, 7)          -- pad
            , (Percussion, 9)            -- drums
            ]
 

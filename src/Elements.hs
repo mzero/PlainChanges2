@@ -2,7 +2,7 @@ module Elements
     ( ring, ringNotes, ringPerc
     , tempoInterp
 
-    , onBass, onBells, onCoil, onDrums, onVoice
+    , onBass, onBells, onCoil, onDrums, onPad
     , onBassStrings
     , onBassEString, onBassAString, onBassDString, onBassGString
     , bassFF, bassMF, bassP, bassPP
@@ -45,12 +45,12 @@ tempoInterp start end = phrase [Tmp $ Accelerando accl] . tempo start
 -- Orchestration
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
-onBass, onBells, onCoil, onDrums, onVoice :: Music a -> Music a
+onBass, onBells, onCoil, onDrums, onPad :: Music a -> Music a
 onBass  = instrument ElectricBassPicked
 onBells = instrument TubularBells
 onCoil  = instrument Lead2Sawtooth . player "Coil"
 onDrums = instrument Percussion
-onVoice = instrument ChoirAahs
+onPad   = instrument Pad6Metallic
 
 -- | To assign parts to specitic strings of the MechBass, use these.
 -- They are a bit of a hack: Each is assigned a different instrument, which is
@@ -131,10 +131,9 @@ coilPlayer = basicCoilPlayer { playNote = (playNote basicCoilPlayer) . down12 }
     isCoilAttr (Art (Legato _)) = True
     isCoilAttr _ = False
 
-    coilInterp (Art (Staccato f)) | f <= 1/4 = mapDurs (const 0.045)
-                                  | f <= 1/2 = mapDurs (const 0.090)
-                                  | otherwise = id
-    coilInterp (Art (Legato _)) = mapDurs (\d -> (d * 7/8) `min` 0.150)
+    coilInterp (Art (Staccato f)) | f <= 1/4  = mapDurs (const 0.045)
+                                  | otherwise = mapDurs (const 0.090)
+    coilInterp (Art (Legato _)) = mapDurs (\d -> (d * 3/4) `min` 0.150)
     coilInterp _ = id
 
     mapDurs f (evs,d) = (map (adjustDur f) evs, d)
