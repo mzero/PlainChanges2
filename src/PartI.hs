@@ -102,7 +102,7 @@ sectionD :: Music Pitch
 sectionD = delayM startSectD $
     p1OnDrums percD
     :=: onCoilLong coilD
-    :=: onCoilLong coilD'
+    :=: onPad coilD'
   where
     percD = timesM 8 $ ringPerc en [AcousticSnare, AcousticSnare]
     coilD = delayM (20*en) $ line $ map (ringNotes en) pairs

@@ -30,6 +30,8 @@ Preamble
 
 Part I
   [x] remove bass drum from drum parts (?)
+  [x] low part in section D is now too low
+    it is the coil counter - moved to pad voice
   - refactor code
   - section D may be okay
   - section E needs work
@@ -53,9 +55,14 @@ Misc
   [-] try dropping coil an octave for performance
   [x] fermata (part II and III)
   - unplayable notes
-    - on coil on part III
     - on bass throughout
+  [ ] bass not monomorphic error
+
+  [ ] add pad to level setting test
+
   - bell dynamics
+  - pad dynamics
+
   - volume tweaks per phrase?
   - articulation tweaks per phrase?
 
