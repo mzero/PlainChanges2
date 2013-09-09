@@ -15,8 +15,8 @@ fMinorScale = [F, G, Af, Bf, C, Df, Ef, F]
 
 b1pitches, b2pitches, b3pitches, b4pitches :: [Pitch]
 b1pitches = [(E,  3), (Df, 3), (Bf, 2), (G, 2)]
-b2pitches = [(C,  4), (Af, 3), (F,  3), (C, 3)]
-b3pitches = [(Df, 4), (C,  4), (Af, 3), (E, 3)]
+b2pitches = [(Bf,  3), (Af, 3), (F,  3), (C, 3)]
+b3pitches = [(Df, 4), (Bf,  3), (Af, 3), (E, 3)]
 b4pitches = [(F,  4), (Ef, 4), (C, 4), (G, 3)]
 
 r4phraseDur :: Dur

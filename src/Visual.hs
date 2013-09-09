@@ -50,8 +50,8 @@ partIIbass = beside $ matchHeight
     beside = map (intercalate "   ") . transpose
 
     b1pitches = [E, Df, Bf, G]
-    b2pitches = [C', Af, F, C]
-    b3pitches = [Df, C, Af, E]
+    b2pitches = [Bf, Af, F, C]
+    b3pitches = [Df, Bf, Af, E]
     b4pitches = [F, Ef, C, G]
 
 partIIIbass :: [String]

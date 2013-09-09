@@ -23,7 +23,7 @@ bassStrings :: [BassString] -- lowest pitch
 bassStrings = map (\lo -> BassString lo (lo + numFrets - 1)) notes
   where
     notes = [ 28, 33, 38, 43 ] -- (E,2), ((A,2), (D,3), (G,3)
-    numFrets = 13
+    numFrets = 14
 
 eString, aString, dString, gString :: BassString
 [eString, aString, dString, gString] = bassStrings
