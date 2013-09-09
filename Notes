@@ -61,7 +61,7 @@ Misc
     - the allocator should have handled this by stealing the note...
       but no matter, just removed the totally unneeded fermata
 
-  [ ] add pad to level setting test
+  [x] add pad to level setting test
 
   - bell dynamics
   - pad dynamics

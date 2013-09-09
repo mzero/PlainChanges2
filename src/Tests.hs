@@ -11,7 +11,7 @@ import Elements
 levelTest :: Music Pitch
 levelTest = line parts :+: timesM 4 (chord parts)
   where
-    parts = [coilTest, bassTest, bellTest, drumTest]
+    parts = [coilTest, bassTest, bellTest, padTest, drumTest]
 
     coilTest = timesM 2 $ onCoilLong (line coilNotes)
             :+: onCoilLong (timesM 4 $ chord coilNotes)
@@ -33,6 +33,9 @@ levelTest = line parts :+: timesM 4 (chord parts)
         :+: timesM 3 (perc RideCymbal2 sn :+: perc RideCymbal2 sn :+: perc CrashCymbal2 en)
         :+: perc CrashCymbal2 en :+: perc CrashCymbal2 en
 
+    padTest = onPad $ timesM 2 $ lowLine :+: highLine
+    lowLine = line $ map (note hn) [(D,4), (B,4), (B,5), (Fs,5)]
+    highLine = line $ map (note qn) [(D,5), (Gs,5), (Cs,6), (E,6)]
 
 bassVolumeTest :: Music Pitch
 bassVolumeTest = line $ map atVolume volumes
