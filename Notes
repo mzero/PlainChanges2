@@ -57,8 +57,9 @@ Misc
   [x] fermata (part II and III)
   - unplayable notes
     - on bass throughout
-  [ ] bass not monomorphic error
-
+  [x] bass not monomorphic error
+    - the allocator should have handled this by stealing the note...
+      but no matter, just removed the totally unneeded fermata
   [ ] add pad to level setting test
 
   - bell dynamics

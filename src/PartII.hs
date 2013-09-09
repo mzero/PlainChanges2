@@ -23,7 +23,7 @@ r4phraseDur :: Dur
 r4phraseDur = 9*qn
 
 ostinado :: Music Pitch
-ostinado = bassMF $ holdLast $
+ostinado = bassMF $
         (onBassEString $ riff  0   0    0 b1pitches)
     :=: (onBassAString $ riff  4   0 (-2) b2pitches)
     :=: (onBassDString $ riff  8   0 (-1) b3pitches)
