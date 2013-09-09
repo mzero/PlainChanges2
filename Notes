@@ -46,11 +46,11 @@ Part II
   [x] add more echos? maybe on 7?
 
 Part III
-  - why is 2nd to last note so late?
+  [x] why is 2nd to last note so late? - presumably fixed with timing boost
   [x] 7 repeats?
 
 Misc
-  [ ] update MechBass timing to +30% (yikes!)
+  [x] update MechBass timing to +30% (yikes!)
   [x] bass timing test
   [x] timing of inter-part rests - shortened
   [-] try dropping coil an octave for performance
@@ -60,6 +60,7 @@ Misc
   [x] bass not monomorphic error
     - the allocator should have handled this by stealing the note...
       but no matter, just removed the totally unneeded fermata
+
   [ ] add pad to level setting test
 
   - bell dynamics

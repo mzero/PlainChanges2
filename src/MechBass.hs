@@ -61,9 +61,10 @@ rawShifterTimesMs =
     , [ 370, 345, 323, 296, 274, 253, 235, 214, 189, 165, 138, 104,  68,   0 ]
     ]
 
--- | Times are in seconds. Added 15% on advice of MechBase creator.
+-- | Times are in seconds.
+-- Added 30% after measuring response of current firmware.
 shifterTimes :: [[Time]]
-shifterTimes = map (map (* (0.001 * 1.15))) rawShifterTimesMs
+shifterTimes = map (map (* (0.001 * 1.30))) rawShifterTimesMs
 
 -- | Time it takes to shift from one fret to another.
 shifterTime :: Fret -> Fret -> Time
