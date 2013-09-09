@@ -42,7 +42,7 @@ coil = onCoilShort
 
 coilAccentB3 :: Music Pitch
 coilAccentB3 = onCoilShort $ delayM (8*r4phraseDur)
-    $ chord (map acc [4, 6, 10, 11, 12])
+    $ chord (map acc [4, 6, 7, 10, 11, 12])
   where
     acc n = delayM (fromIntegral n*r4phraseDur) $ chord $
         zipWith accLine [0..] $ take 8 $ drop (n * 8) b3line
