@@ -15,7 +15,7 @@ bFlatMajorScale = [Bf, C, D, Ef, F, G, A, Bf]
 
 
 p3Ostinado :: Music Pitch
-p3Ostinado = onBass $ holdLast $ bassMF $
+p3Ostinado = onBass $ holdLast $ bassFF $
     ringNotes en [(Bf, 3), (F, 3), (D, 3), (C, 3), (Bf, 2)]
 
 p3r2, p3r2', p3r3, p3r4 :: Music Pitch
@@ -32,11 +32,11 @@ p3r4dur = dur p3r4
 p3OstinadoPhraseDur :: Dur
 p3OstinadoPhraseDur = 11 * qn
 
-coilAndPad :: Music Pitch -> Music Pitch
-coilAndPad m = onCoilLong m :=: onPad m
+coilAndPad :: StdLoudness -> Music Pitch -> Music Pitch
+coilAndPad l m = onCoilLong m :=: onPad (phrase [Dyn $ StdLoudness l] m)
 
 p3SetA :: Music Pitch
-p3SetA = coilAndPad $ chord
+p3SetA = coilAndPad SF $ chord
     [ timesM 10 $ p3r2
     , delayM (2 * p3r2dur) $ timesM 2 p3r3
     , delayM (2 * p3r2dur + p3r3dur) p3r4
@@ -45,7 +45,7 @@ p3SetA = coilAndPad $ chord
 p3SetB :: Music Pitch
 p3SetB = onBells (p3r2 :+: rest p3r2dur :+: p3r2' :+: rest p3r2dur :+: p3r2) :+: chord
     [ onBells $ p3r3 :+: p3r3 :+: p3r4
-    , coilAndPad p3r4
+    , coilAndPad FF p3r4
     , delayM (2 * p3r3dur) $ onCoilShort coilOrnaments
     ]
   where
@@ -59,7 +59,7 @@ p3SetB = onBells (p3r2 :+: rest p3r2dur :+: p3r2' :+: rest p3r2dur :+: p3r2) :+:
 p3SetC :: Music Pitch
 p3SetC = chord
     [ onBells $ holdLast $ timesM 7 final
-    , coilAndPad $ chord $ zipWith cCycle [5,3,1] [0,12,24]
+    , coilAndPad FF $ chord $ zipWith cCycle [5,3,1] [0,12,24]
         -- N.B.: The high (Bf,6) of the very last cycle is too high for the
         -- coil - it just gets dropped... oh well!
     ]

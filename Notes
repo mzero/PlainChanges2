@@ -33,7 +33,7 @@ Part I
   [x] low part in section D is now too low
     it is the coil counter - moved to pad voice
   - refactor code
-  - section D may be okay
+  [-] section D may be okay
   - section E needs work
 
 Part II
@@ -65,7 +65,7 @@ Misc
 
   [x] accented drums in part I
   [-] bell dynamics
-  - pad dynamics
+  [x] pad dynamics
 
   [-] volume tweaks per phrase?
   [-] articulation tweaks per phrase?
