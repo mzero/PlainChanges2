@@ -124,12 +124,8 @@ startSectE :: Dur
 startSectE = start4s + 2 * dur4s + 2 * phrase4
 
 sectionE :: Music Pitch
-sectionE = delayM startSectE $
-    p1OnDrums percE
-    :=: onCoilLong coilE
+sectionE = delayM startSectE $ onCoilLong coilE
   where
-    percE = ringSnareButOne q 3
-        :+: ringSnareButOne q 3
     coilE = chord $ zipWith riff [0..]
                 [ [(Fs,6), (B,5), (G, 5)]
                 , [(D,6), (A, 5), (Fs, 5)]
@@ -160,11 +156,21 @@ sectionF = delayM startSectF $
         , [(G,5), (D,5), (B, 4), (E, 4)]
         ]
     percF = timesM 3 $
-        rest hn :+: ringSnareButOne sn 4
+        rest hn :+: ringSnareButOneAccented sn 4
 
 ringSnareButOne :: Dur -> Int -> Music Pitch
-ringSnareButOne d n = line $ map (uncurry $ flip ($)) $
-    ring d $ replicate (n-1) (perc AcousticSnare) ++ [rest]
+ringSnareButOne d n = line $ snareButOne d n
+
+ringSnareButOneAccented :: Dur -> Int -> Music Pitch
+ringSnareButOneAccented d n = line $ zipWith ($) (cycle accent) $ snareButOne d n
+  where
+    accent = (phrase [Dyn $ StdLoudness MF]) : replicate (n-1) id
+          ++ (phrase [Dyn $ StdLoudness SF]) : replicate (n-1) id
+
+snareButOne :: Dur -> Int -> [Music Pitch]
+snareButOne d n = map (\(d,f) -> f d) $ ring d butOne
+  where
+    butOne = replicate (n-1) (perc AcousticSnare) ++ [rest]
 
 p1coil :: Music Pitch
 p1coil = onCoilLong $ p1coilA :=: p1coilB :=: p1coilC
