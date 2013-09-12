@@ -115,10 +115,10 @@ sectionD = delayM startSectD $
             ]
     coilD' = delayM (20*en) $ chord $ zipWith riff [0..]
         [ [(G,4), (D,4)]
-        , [(Fs,5), (G,4)]
+        , [(Fs,5), (Fs,4)]
         , [(B,5), (D,4)]
         ]
-    riff n ps = delayM (n*10*en) $ ringNotes hn ps
+    riff n ps = delayM (n*3*hn) $ ringNotes hn ps
 
 startSectE :: Dur
 startSectE = start4s + 2 * dur4s + 2 * phrase4
