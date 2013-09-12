@@ -30,7 +30,7 @@ p3r3dur = dur p3r3
 p3r4dur = dur p3r4
 
 p3OstinadoPhraseDur :: Dur
-p3OstinadoPhraseDur = 11 * qn
+p3OstinadoPhraseDur = 11 * en
 
 coilAndPad :: StdLoudness -> Music Pitch -> Music Pitch
 coilAndPad l m = onCoilLong m :=: onPad (phrase [Dyn $ StdLoudness l] m)
@@ -71,5 +71,5 @@ p3SetC = chord
 partIII :: Music Pitch
 partIII = tempo (160/120) $
     p3Ostinado
-    :=: delayM ( 1*p3OstinadoPhraseDur) p3SetA
-    :=: delayM (12*p3OstinadoPhraseDur) (p3SetB :+: p3SetC)
+    :=: delayM ( 2*p3OstinadoPhraseDur) p3SetA
+    :=: delayM (24*p3OstinadoPhraseDur) (p3SetB :+: p3SetC)
