@@ -68,6 +68,12 @@ percB = onDrums $ delayM (4*r4phraseDur - qn) $
     :+: rest (11*sn)
     :+: phrase [Dyn (Diminuendo 0.5)] (vol MP $ ringCymbal sn 4)
 
+percB3 :: Music Pitch
+percB3 = onDrums $ vol MP $ chord [riff 4 5, riff 10 4]
+  where
+    riff d n = delayM ((8+d)*r4phraseDur + dhn) $ timesM n ride
+    ride = ringPerc sn [AcousticSnare, RideCymbal2, RideCymbal2]
+
 percC :: Music Pitch
 percC = onDrums $ delayM (810*sn) rollAndCrash
 
@@ -90,4 +96,4 @@ p2tempo m = tempo (startTempo / 120) mAll
 
 partII :: Music Pitch
 partII = p2tempo $ percA :=: delayM (5*qn)
-        (ostinado :=: coil :=: coilAccentB3 :=: percB :=: percC)
+        (ostinado :=: coil :=: coilAccentB3 :=: percB :=: percB3 :=: percC)
