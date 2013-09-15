@@ -102,7 +102,7 @@ sectionD :: Music Pitch
 sectionD = delayM startSectD $
     p1OnDrums percD
     :=: onCoilLong coilD
-    :=: onPad (phrase [Dyn $ StdLoudness P] coilD')
+    :=: padD
   where
     percD = timesM 8 $ ringPerc en [AcousticSnare, AcousticSnare]
     coilD = delayM (20*en) $ line $ map (ringNotes en) pairs
@@ -113,18 +113,14 @@ sectionD = delayM startSectD $
             , [(B,5), (D, 5)]
             , [(Fs,6), (D, 5)]
             ]
-    coilD' = delayM (20*en) $ chord $ zipWith riff [0..]
-        [ [(G,4), (D,4)]
-        , [(Fs,5), (Fs,4)]
-        , [(B,5), (D,4)]
-        ]
-    riff n ps = delayM (n*3*hn) $ ringNotes hn ps
+    padD = delayM (20*en) $ padLine hn
+
 
 startSectE :: Dur
 startSectE = start4s + 2 * dur4s + 2 * phrase4
 
 sectionE :: Music Pitch
-sectionE = delayM startSectE $ onCoilLong coilE
+sectionE = delayM startSectE $ onCoilLong coilE :=: padE
   where
     coilE = chord $ zipWith riff [0..]
                 [ [(Fs,6), (B,5), (G, 5)]
@@ -136,6 +132,7 @@ sectionE = delayM startSectE $ onCoilLong coilE
                 ]
     riff n ps = delayM (n * 15 * q) $ ringNotes q ps
     q = dsn
+    padE = padLine dhn
 
 startSectF :: Dur
 startSectF = start4s + 3 * dur4s + 2 * phrase4
@@ -144,6 +141,7 @@ sectionF :: Music Pitch
 sectionF = delayM startSectF $
     onCoilLong coilF
     :=: p1OnDrums percF
+    :=: padF
   where
     coilF = chord $ zipWith (\n ps -> delayM (n*37*sn) $ ringNotes sn ps) [0..]
         [ [(G,6), (E,6), (C, 6), (G, 5)]
@@ -157,6 +155,16 @@ sectionF = delayM startSectF $
         ]
     percF = timesM 3 $
         rest hn :+: ringSnareButOneAccented sn 4
+    padF = padLine wn
+
+padLine :: Dur -> Music Pitch
+padLine q = onPad $ phrase [Dyn $ StdLoudness P] $ chord $ zipWith riff [0..]
+        [ [(G,4), (D,4)]
+        , [(Fs,5), (Fs,4)]
+        , [(B,5), (D,4)]
+        ]
+  where
+    riff n ps = delayM (n*3*q) $ ringNotes q ps
 
 ringSnareButOne :: Dur -> Int -> Music Pitch
 ringSnareButOne d n = line $ snareButOne d n
