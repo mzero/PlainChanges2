@@ -113,7 +113,7 @@ sectionD = delayM startSectD $
             , [(B,5), (D, 5)]
             , [(Fs,6), (D, 5)]
             ]
-    padD = delayM (20*en) $ padLine hn
+    padD = delayM (20*en) $ padLine hn padSetD
 
 
 startSectE :: Dur
@@ -132,7 +132,7 @@ sectionE = delayM startSectE $ onCoilLong coilE :=: padE
                 ]
     riff n ps = delayM (n * 15 * q) $ ringNotes q ps
     q = dsn
-    padE = padLine dhn
+    padE = padLine dhn padSetE
 
 startSectF :: Dur
 startSectF = start4s + 3 * dur4s + 2 * phrase4
@@ -155,16 +155,20 @@ sectionF = delayM startSectF $
         ]
     percF = timesM 3 $
         rest hn :+: ringSnareButOneAccented sn 4
-    padF = padLine wn
+    padF = padLine wn padSetF
 
-padLine :: Dur -> Music Pitch
-padLine q = onPad $ phrase [Dyn $ StdLoudness P] $ chord $ zipWith riff [0..]
-        [ [(G,4), (D,4)]
-        , [(Fs,5), (Fs,4)]
-        , [(B,5), (D,4)]
-        ]
+padLine :: Dur -> [[Pitch]] -> Music Pitch
+padLine q pss = onPad $ phrase [Dyn $ StdLoudness P] $ chord $ zipWith riff [0..] pss
   where
     riff n ps = delayM (n*3*q) $ ringNotes q ps
+
+-- These are based on the corresponding bass pitch set:
+-- The two note rings are drawn from the pitches of the corresponding bass ring:
+-- 3rd,4th then 1st,1st(8vb) then 2nd,4th
+padSetD, padSetE, padSetF :: [[Pitch]]
+padSetD = [ [(G,4), (D,4)] , [(Fs,5), (Fs,4)] , [(B,5), (D,4)] ]
+padSetE = [ [(Fs,4), (B,3)] , [(D,5), (D,4)] , [(A,5), (B,3)] ]
+padSetF = [ [(B,4), (E,4)] , [(G,5), (G,4)] , [(D,6), (E,4)] ]
 
 ringSnareButOne :: Dur -> Int -> Music Pitch
 ringSnareButOne d n = line $ snareButOne d n
