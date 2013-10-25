@@ -9,6 +9,23 @@ work, as well as further detailed information and programs related to it.
 See the files in the `doc` directory for all details.
 
 
+Performance
+===========
+
+The work premiered on September 20th, at the _Forks in Sockets_ concert, in
+Wellington, New Zealand.
+
+## Audio ##
+
+Live performance: https://soundcloud.com/mtnviewmark/plain-changes-2-live-1
+Studio recording: https://soundcloud.com/mtnviewmark/plain-changes-2-all-synth-mix
+
+## Video ##
+
+Concert video: http://www.youtube.com/watch?v=s39dyz6aG9E
+
+
+
 Copyright & License
 ===================
 
